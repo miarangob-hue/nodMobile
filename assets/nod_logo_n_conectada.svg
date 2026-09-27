@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="520" height="680" viewBox="0 0 260 340">
+<title>Logo NOD — N conectada con huella de perro en el círculo superior derecho</title>
+<desc>La letra N formada por trazos con nodos en las puntas, centrada con el nombre NOD, con una huella de perro en tono coral suave únicamente en el círculo superior derecho.</desc>
+
+<rect x="0" y="0" width="260" height="340" fill="#FDF2EE"/>
+<rect x="40" y="40" width="180" height="260" rx="12" fill="#F5C4B3"/>
+
+<g stroke="#993C1D" stroke-width="6" stroke-linecap="round" fill="none">
+<line x1="105" y1="150" x2="105" y2="80"/>
+<line x1="105" y1="80" x2="155" y2="150"/>
+<line x1="155" y1="150" x2="155" y2="80"/>
+</g>
+
+<circle cx="105" cy="80" r="9" fill="#F0997B" stroke="#993C1D" stroke-width="2"/>
+<circle cx="105" cy="150" r="9" fill="#D85A30" stroke="#993C1D" stroke-width="2"/>
+<circle cx="155" cy="150" r="9" fill="#D85A30" stroke="#993C1D" stroke-width="2"/>
+
+<circle cx="155" cy="80" r="13" fill="#FFFFFF" stroke="#993C1D" stroke-width="2"/>
+<ellipse cx="155" cy="84" rx="5.5" ry="4.5" fill="#F0997B"/>
+<circle cx="148" cy="76" r="2.4" fill="#F0997B"/>
+<circle cx="155" cy="72" r="2.4" fill="#F0997B"/>
+<circle cx="162" cy="76" r="2.4" fill="#F0997B"/>
+
+<text x="130" y="240" text-anchor="middle" font-family="-apple-system, Helvetica, Arial, sans-serif" font-size="28" font-weight="600" fill="#4A1B0C">NOD</text>
+</svg>

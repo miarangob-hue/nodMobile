@@ -1,0 +1,1920 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "NOD Provider API",
+    "version": "1.0.0",
+    "description": "API pública de NOD para consultar servicios, proveedores, disponibilidad y gestionar agendamientos.\n\n**Autenticación:** todos los endpoints protegidos requieren el header `x-api-key` con una clave activa emitida desde el panel de administración de NOD. Las claves se muestran una sola vez al generarlas.\n\n**Formato:** todas las respuestas son JSON. Las fechas usan ISO 8601 (UTC).",
+    "contact": {
+      "name": "Soporte NOD",
+      "url": "https://provider.nodnova.com"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://qhekasefqqoiibjvhfvy.supabase.co/functions/v1",
+      "description": "Producción"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Autenticación",
+      "description": "Inicio de sesión y renovación de tokens."
+    },
+    {
+      "name": "Catálogo",
+      "description": "Servicios, productos y conteos."
+    },
+    {
+      "name": "Proveedores",
+      "description": "Búsqueda de proveedores y disponibilidad."
+    },
+    {
+      "name": "Agendamientos",
+      "description": "Creación, consulta y cancelación de reservas."
+    },
+    {
+      "name": "Onboarding",
+      "description": "Pasos, campos y respuestas del onboarding de proveedores."
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "ApiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-api-key"
+      }
+    },
+    "schemas": {
+      "Booking": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "provider_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "customer_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "service_id": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "product_id": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "service_name": {
+            "type": "string",
+            "nullable": true
+          },
+          "product_name": {
+            "type": "string",
+            "nullable": true
+          },
+          "price": {
+            "type": "number",
+            "nullable": true
+          },
+          "currency": {
+            "type": "string",
+            "example": "CLP"
+          },
+          "payment_status": {
+            "type": "string",
+            "example": "pending"
+          },
+          "status": {
+            "type": "string",
+            "example": "scheduled"
+          },
+          "starts_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "ends_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "started_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Hora real de inicio del servicio."
+          },
+          "completed_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Hora real de finalización del servicio."
+          },
+          "completion_photo_path": {
+            "type": "string",
+            "nullable": true,
+            "description": "Ruta de la foto de finalización."
+          },
+          "completion_notes": {
+            "type": "string",
+            "nullable": true
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "Provider": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "full_name": {
+            "type": "string"
+          },
+          "city": {
+            "type": "string",
+            "nullable": true
+          },
+          "comunas": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "status": {
+            "type": "string",
+            "example": "approved"
+          }
+        }
+      },
+      "OnboardingStepField": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "key": {
+            "type": "string",
+            "example": "about"
+          },
+          "label": {
+            "type": "string"
+          },
+          "help_text": {
+            "type": "string",
+            "nullable": true
+          },
+          "field_type": {
+            "type": "string",
+            "example": "text",
+            "description": "text, textarea, select, multiselect, file, etc."
+          },
+          "required": {
+            "type": "boolean"
+          },
+          "sort_order": {
+            "type": "integer"
+          },
+          "options": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "validation": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "OnboardingStep": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "key": {
+            "type": "string",
+            "example": "profile"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "icon": {
+            "type": "string",
+            "nullable": true
+          },
+          "sort_order": {
+            "type": "integer"
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "applies_to": {
+            "type": "string"
+          },
+          "service_categories": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "fields": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OnboardingStepField"
+            }
+          }
+        }
+      },
+      "OnboardingStepProgress": {
+        "type": "object",
+        "properties": {
+          "step_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "key": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "sort_order": {
+            "type": "integer"
+          },
+          "status": {
+            "type": "string",
+            "example": "completed"
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "responses": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "field_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "field_key": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "label": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "value": {
+                  "nullable": true
+                },
+                "file_document_id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "nullable": true
+                }
+              }
+            }
+          }
+        }
+      },
+      "ServiceProviderCount": {
+        "type": "object",
+        "properties": {
+          "family_id": {
+            "type": "string",
+            "nullable": true
+          },
+          "family_name": {
+            "type": "string",
+            "nullable": true
+          },
+          "service_id": {
+            "type": "string"
+          },
+          "service_name": {
+            "type": "string",
+            "nullable": true
+          },
+          "provider_count": {
+            "type": "integer"
+          },
+          "refreshed_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    }
+  },
+  "security": [
+    {
+      "ApiKeyAuth": []
+    }
+  ],
+  "paths": {
+    "/get-services": {
+      "get": {
+        "tags": [
+          "Catálogo"
+        ],
+        "summary": "Listar servicios disponibles",
+        "description": "Devuelve el catálogo de servicios de la familia configurada para la plataforma.",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Listado de servicios."
+          },
+          "400": {
+            "description": "No hay clientes de consumo activos o falta el Family ID.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Error del proveedor externo de catálogo.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/get-service-by-id": {
+      "get": {
+        "tags": [
+          "Catálogo"
+        ],
+        "summary": "Detalle de un servicio",
+        "security": [],
+        "parameters": [
+          {
+            "name": "service_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "ID del servicio (también se acepta `id`)."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Detalle completo del servicio con paquetes y productos."
+          },
+          "400": {
+            "description": "Falta service_id.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Error del proveedor externo de catálogo.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/get-product-by-id": {
+      "get": {
+        "tags": [
+          "Catálogo"
+        ],
+        "summary": "Detalle de un producto",
+        "security": [],
+        "parameters": [
+          {
+            "name": "product_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "ID del producto (también se acepta `id`)."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Detalle del producto."
+          },
+          "400": {
+            "description": "Falta product_id.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Error del proveedor externo de catálogo.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/get-service-provider-counts": {
+      "get": {
+        "tags": [
+          "Catálogo"
+        ],
+        "summary": "Conteo de proveedores por familia y servicio",
+        "description": "Valores precalculados que se refrescan automáticamente cada noche (03:00 UTC).",
+        "parameters": [
+          {
+            "name": "x-api-key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "API Key generada en el panel de administración (Configuración → API Keys)."
+          },
+          {
+            "name": "family_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filtra el resultado por familia de servicio."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Listado de conteos.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ServiceProviderCount"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key ausente, inválida o inactiva.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/login": {
+      "post": {
+        "tags": [
+          "Autenticación"
+        ],
+        "summary": "Iniciar sesión / renovar sesión",
+        "description": "Autentica a un usuario de NOD con correo y contraseña y devuelve los tokens de sesión.\n\nTambién permite renovar la sesión enviando `refresh_token` en lugar de las credenciales.\n\nEl `access_token` devuelto es un JWT que puede usarse como `Authorization: Bearer <access_token>` en los endpoints que operan sobre el usuario autenticado. La respuesta incluye los roles y, si aplica, el perfil de proveedor asociado.",
+        "parameters": [
+          {
+            "name": "x-api-key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "API Key generada en el panel de administración (Configuración → API Keys)."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "example": "maria@ejemplo.cl"
+                  },
+                  "password": {
+                    "type": "string",
+                    "minLength": 6,
+                    "example": "••••••••"
+                  },
+                  "refresh_token": {
+                    "type": "string",
+                    "description": "Opcional. Si se envía, se renueva la sesión y se ignoran email/password."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Sesión iniciada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "access_token": {
+                      "type": "string"
+                    },
+                    "refresh_token": {
+                      "type": "string"
+                    },
+                    "token_type": {
+                      "type": "string",
+                      "example": "bearer"
+                    },
+                    "expires_in": {
+                      "type": "integer",
+                      "example": 3600
+                    },
+                    "expires_at": {
+                      "type": "integer",
+                      "example": 1755561600
+                    },
+                    "user": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "email": {
+                          "type": "string",
+                          "format": "email"
+                        }
+                      }
+                    },
+                    "roles": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "example": [
+                        "admin"
+                      ]
+                    },
+                    "provider": {
+                      "type": "object",
+                      "nullable": true,
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "first_name": {
+                          "type": "string"
+                        },
+                        "last_name": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string",
+                          "example": "onboarding"
+                        },
+                        "onboarding_step": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "service_categories": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos (revisa el objeto `fields`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key inválida, credenciales inválidas o refresh token expirado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "La cuenta no ha sido confirmada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/register-provider": {
+      "post": {
+        "tags": [
+          "Proveedores"
+        ],
+        "summary": "Registrar un proveedor",
+        "description": "Crea la cuenta de usuario y el registro del proveedor con los mismos campos del formulario de registro de NOD (RUT, nombre, apellido, correo, contraseña, teléfono con código de país y tipo de personería). El proveedor queda en estado `onboarding` y debe completar su perfil, servicios y documentos. El RUT se valida con módulo 11 y debe ser único.",
+        "parameters": [
+          {
+            "name": "x-api-key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "API Key generada en el panel de administración (Configuración → API Keys)."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "rut",
+                  "first_name",
+                  "last_name",
+                  "email",
+                  "password",
+                  "phone"
+                ],
+                "properties": {
+                  "rut": {
+                    "type": "string",
+                    "example": "12.345.678-9",
+                    "description": "RUT chileno; se normaliza a 12345678-9."
+                  },
+                  "first_name": {
+                    "type": "string",
+                    "maxLength": 80,
+                    "example": "María"
+                  },
+                  "last_name": {
+                    "type": "string",
+                    "maxLength": 80,
+                    "example": "Pérez"
+                  },
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "example": "maria@ejemplo.cl"
+                  },
+                  "password": {
+                    "type": "string",
+                    "minLength": 8,
+                    "maxLength": 72
+                  },
+                  "phone": {
+                    "type": "string",
+                    "example": "+56 912345678",
+                    "description": "Incluye el código de país."
+                  },
+                  "legal_entity_type": {
+                    "type": "string",
+                    "enum": [
+                      "natural",
+                      "juridica"
+                    ],
+                    "default": "natural"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Proveedor creado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "user_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "email": {
+                      "type": "string",
+                      "format": "email"
+                    },
+                    "legal_entity_type": {
+                      "type": "string"
+                    },
+                    "provider": {
+                      "$ref": "#/components/schemas/Provider"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos (revisa el objeto `fields`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key ausente, inválida o inactiva.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "El correo o el RUT ya están registrados.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/get-onboarding-steps": {
+      "get": {
+        "tags": [
+          "Onboarding"
+        ],
+        "summary": "Listar pasos y campos del onboarding",
+        "description": "Devuelve la configuración vigente del onboarding de proveedores: pasos activos, sus campos (tipo, obligatoriedad, opciones y validaciones) y las categorías de servicio a las que aplican. Los pasos sin categorías aplican a todos los proveedores.",
+        "parameters": [
+          {
+            "name": "x-api-key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "API Key generada en el panel de administración (Configuración → API Keys)."
+          },
+          {
+            "name": "service_category",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "dog_walker"
+            },
+            "description": "Devuelve solo los pasos generales y los específicos de esa categoría."
+          },
+          {
+            "name": "include_inactive",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Configuración del onboarding.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "steps": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/OnboardingStep"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key ausente, inválida o inactiva.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/get-provider-onboarding": {
+      "get": {
+        "tags": [
+          "Onboarding"
+        ],
+        "summary": "Progreso de onboarding de un proveedor",
+        "description": "Devuelve el estado de cada paso del onboarding para el proveedor indicado junto con las respuestas guardadas.",
+        "parameters": [
+          {
+            "name": "x-api-key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "API Key generada en el panel de administración (Configuración → API Keys)."
+          },
+          {
+            "name": "provider_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Progreso y respuestas del proveedor.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "provider": {
+                      "$ref": "#/components/schemas/Provider"
+                    },
+                    "steps": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/OnboardingStepProgress"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Falta provider_id.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key ausente, inválida o inactiva.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Proveedor no encontrado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/submit-provider-onboarding": {
+      "post": {
+        "tags": [
+          "Onboarding"
+        ],
+        "summary": "Guardar respuestas de un paso del onboarding",
+        "description": "Guarda (crea o actualiza) las respuestas de un paso usando las claves de campo devueltas por `GET /get-onboarding-steps` y marca el estado del paso. Con `submit_for_review: true` el proveedor pasa a estado `pending_review` para su revisión por el equipo de NOD.",
+        "parameters": [
+          {
+            "name": "x-api-key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "API Key generada en el panel de administración (Configuración → API Keys)."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "provider_id"
+                ],
+                "properties": {
+                  "provider_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "step_key": {
+                    "type": "string",
+                    "example": "profile",
+                    "description": "Clave del paso a guardar."
+                  },
+                  "answers": {
+                    "type": "object",
+                    "additionalProperties": true,
+                    "description": "Mapa `field_key` → valor. Las claves deben pertenecer al paso indicado.",
+                    "example": {
+                      "about": "10 años paseando perros",
+                      "instagram_url": "https://instagram.com/nod"
+                    }
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "pending",
+                      "in_progress",
+                      "completed"
+                    ],
+                    "default": "completed"
+                  },
+                  "submit_for_review": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Envía el onboarding completo a revisión."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Respuestas guardadas.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "provider_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "step": {
+                      "type": "object",
+                      "nullable": true
+                    },
+                    "status": {
+                      "type": "string",
+                      "example": "pending_review"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos o campos desconocidos para el paso.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key ausente, inválida o inactiva.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Proveedor o paso no encontrado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/get-providers-by-service": {
+      "get": {
+        "tags": [
+          "Proveedores"
+        ],
+        "summary": "Proveedores por servicio",
+        "description": "Devuelve los proveedores aprobados que prestan el servicio indicado.",
+        "parameters": [
+          {
+            "name": "x-api-key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "API Key generada en el panel de administración (Configuración → API Keys)."
+          },
+          {
+            "name": "service_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "ID del servicio a consultar."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Listado de proveedores.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Provider"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Falta service_id.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key ausente, inválida o inactiva.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/get-provider-availability": {
+      "get": {
+        "tags": [
+          "Proveedores"
+        ],
+        "summary": "Disponibilidad de un proveedor",
+        "description": "Devuelve los bloques horarios libres del proveedor, descontando reservas y bloqueos existentes.",
+        "parameters": [
+          {
+            "name": "x-api-key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "API Key generada en el panel de administración (Configuración → API Keys)."
+          },
+          {
+            "name": "provider_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Fecha inicial (YYYY-MM-DD)."
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Fecha final (YYYY-MM-DD)."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Disponibilidad, productos y tarifas del proveedor."
+          },
+          "400": {
+            "description": "Parámetros inválidos.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key ausente, inválida o inactiva.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/create-booking-request": {
+      "post": {
+        "tags": [
+          "Agendamientos"
+        ],
+        "summary": "Crear una solicitud de agendamiento",
+        "parameters": [
+          {
+            "name": "x-api-key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "API Key generada en el panel de administración (Configuración → API Keys)."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "provider_id",
+                  "customer_id",
+                  "starts_at",
+                  "ends_at"
+                ],
+                "properties": {
+                  "provider_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "customer_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "service_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "product_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "price": {
+                    "type": "number"
+                  },
+                  "currency": {
+                    "type": "string",
+                    "example": "CLP"
+                  },
+                  "payment_status": {
+                    "type": "string",
+                    "example": "pending"
+                  },
+                  "starts_at": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "ends_at": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "notes": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Reserva creada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Booking"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Cuerpo inválido o datos faltantes.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key ausente, inválida o inactiva.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Método no permitido.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "El proveedor no está disponible en ese horario.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/get-customer-bookings": {
+      "get": {
+        "tags": [
+          "Agendamientos"
+        ],
+        "summary": "Agendamientos de un cliente",
+        "parameters": [
+          {
+            "name": "x-api-key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "API Key generada en el panel de administración (Configuración → API Keys)."
+          },
+          {
+            "name": "customer_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Listado de reservas con nombres de servicio y producto resueltos.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Booking"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Falta customer_id.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key ausente, inválida o inactiva.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/start-service": {
+      "post": {
+        "tags": [
+          "Agendamientos"
+        ],
+        "summary": "Iniciar la prestación de un servicio",
+        "description": "Marca la reserva como `in_progress` y registra la hora real de inicio. Solo el proveedor dueño de la reserva, un administrador o un cliente con API key pueden iniciarla.",
+        "parameters": [
+          {
+            "name": "x-api-key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "API Key generada en el panel de administración (Configuración → API Keys)."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "booking_id"
+                ],
+                "properties": {
+                  "booking_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "notes": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Servicio iniciado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "booking": {
+                      "$ref": "#/components/schemas/Booking"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "booking_id inválido o faltante.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No autorizado para iniciar este servicio.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Reserva no encontrada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "La reserva está cancelada, ya iniciada o ya completada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/complete-service": {
+      "post": {
+        "tags": [
+          "Agendamientos"
+        ],
+        "summary": "Finalizar la prestación de un servicio",
+        "description": "Marca la reserva como `completed`, registra la hora real de término y exige una foto de finalización. Envía la imagen en base64 (`completion_photo_base64`, máx. 5 MB) o la ruta de un archivo ya cargado (`completion_photo_path`). El servicio debe haber sido iniciado previamente.",
+        "parameters": [
+          {
+            "name": "x-api-key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "API Key generada en el panel de administración (Configuración → API Keys)."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "booking_id"
+                ],
+                "properties": {
+                  "booking_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "completion_photo_base64": {
+                    "type": "string",
+                    "description": "Imagen en base64 (acepta data URL). Obligatoria si no se envía completion_photo_path."
+                  },
+                  "completion_photo_mime": {
+                    "type": "string",
+                    "example": "image/jpeg"
+                  },
+                  "completion_photo_path": {
+                    "type": "string",
+                    "description": "Ruta de la foto ya almacenada en el bucket de documentos."
+                  },
+                  "notes": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Servicio finalizado con foto de evidencia.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "booking": {
+                      "$ref": "#/components/schemas/Booking"
+                    },
+                    "completion_photo_url": {
+                      "type": "string",
+                      "nullable": true,
+                      "description": "URL firmada válida por 1 hora."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos o falta la foto de finalización.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No autorizado para finalizar este servicio.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Reserva no encontrada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "El servicio no ha sido iniciado, está cancelado o ya fue completado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/cancel-booking": {
+      "post": {
+        "tags": [
+          "Agendamientos"
+        ],
+        "summary": "Cancelar un agendamiento",
+        "description": "Solo el cliente que creó la reserva (o un administrador) puede cancelarla. Notifica por correo al proveedor y al cliente. No procesa reembolsos.",
+        "parameters": [
+          {
+            "name": "x-api-key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "API Key generada en el panel de administración (Configuración → API Keys)."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "booking_id"
+                ],
+                "properties": {
+                  "booking_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "customer_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "customer_email": {
+                    "type": "string",
+                    "format": "email"
+                  },
+                  "reason": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Reserva cancelada."
+          },
+          "400": {
+            "description": "booking_id inválido o faltante.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No autorizado para cancelar esta reserva.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Reserva no encontrada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

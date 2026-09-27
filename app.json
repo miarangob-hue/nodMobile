@@ -1,0 +1,73 @@
+{
+  "expo": {
+    "name": "NOD",
+    "slug": "nod-mobile",
+    "version": "1.0.17",
+    "orientation": "portrait",
+    "scheme": "nod",
+    "platforms": [
+      "ios",
+      "android"
+    ],
+    "userInterfaceStyle": "light",
+    "icon": "./assets/icon.png",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.nod.mobile",
+      "buildNumber": "1",
+      "infoPlist": {
+        "NSCameraUsageDescription": "NOD usa la cámara para tomar fotos de documentos, lugares desbloqueados y evidencia de servicios.",
+        "NSLocationWhenInUseUsageDescription": "NOD usa tu ubicación para registrar inicios de paseo, rutas y spots desbloqueados."
+      }
+    },
+    "android": {
+      "package": "com.nod.mobile",
+      "versionCode": 18,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-foreground.png",
+        "backgroundColor": "#FCFAF7"
+      },
+      "permissions": [
+        "CAMERA",
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION"
+      ],
+      "blockedPermissions": [
+        "android.permission.RECORD_AUDIO"
+      ],
+      "softwareKeyboardLayoutMode": "resize"
+    },
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "NOD usa la cámara para tomar fotos de documentos, lugares desbloqueados y evidencia de servicios."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "NOD usa tu ubicación para registrar inicios de paseo, rutas y spots desbloqueados."
+        }
+      ],
+      "expo-secure-store",
+      "expo-notifications",
+      "expo-font",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#FCFAF7",
+          "image": "./assets/splash.png",
+          "imageWidth": 200,
+          "resizeMode": "contain"
+        }
+      ]
+    ],
+    "extra": {
+      "apiBaseUrl": "https://qhekasefqqoiibjvhfvy.supabase.co/functions/v1"
+    }
+  }
+}

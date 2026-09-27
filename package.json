@@ -1,0 +1,47 @@
+{
+  "name": "nod-mobile",
+  "version": "1.0.0",
+  "private": true,
+  "main": "node_modules/expo/AppEntry.js",
+  "engines": {
+    "node": "^20.19.4 || ^22.13.0 || ^24.3.0 || >=25.0.0"
+  },
+  "scripts": {
+    "start": "expo start",
+    "ios": "expo run:ios",
+    "android": "ANDROID_HOME=/usr/local/share/android-commandlinetools ANDROID_SDK_ROOT=/usr/local/share/android-commandlinetools JAVA_HOME=/usr/local/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home expo start --android",
+    "android:emulator": "/usr/local/share/android-commandlinetools/emulator/emulator -avd NOD_Pixel -netdelay none -netspeed full -no-metrics -gpu host -accel on -no-boot-anim",
+    "build:android": "npx eas build --platform android --profile production",
+    "build:ios": "npx eas build --platform ios --profile production",
+    "build:preview": "npx eas build --platform android --profile preview",
+    "export:android": "expo export --platform android --output-dir dist/android",
+    "submit:android": "npx eas submit --platform android --profile production",
+    "submit:ios": "npx eas submit --platform ios --profile production",
+    "web": "expo start --web",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@expo/vector-icons": "^15.0.2",
+    "expo": "~57.0.24",
+    "expo-device": "~57.0.2",
+    "expo-file-system": "~57.0.7",
+    "expo-font": "~57.0.4",
+    "expo-image-picker": "~57.0.19",
+    "expo-location": "~57.0.19",
+    "expo-notifications": "~57.0.21",
+    "expo-secure-store": "~57.0.4",
+    "expo-splash-screen": "~57.0.9",
+    "expo-status-bar": "~57.0.1",
+    "expo-system-ui": "~57.0.4",
+    "react": "19.2.3",
+    "react-native": "0.86.3",
+    "react-native-safe-area-context": "~5.7.0",
+    "react-native-svg": "15.15.4",
+    "react-native-webview": "13.16.1"
+  },
+  "devDependencies": {
+    "@types/react": "~19.2.4",
+    "babel-preset-expo": "^57.0.7",
+    "typescript": "~6.0.3"
+  }
+}

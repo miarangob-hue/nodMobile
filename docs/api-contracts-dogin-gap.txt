@@ -1,0 +1,909 @@
+Contratos de API necesarios para cerrar brechas tipo Dogin
+===========================================================
+
+Error estandar recomendado
+--------------------------
+Todas las APIs deberian responder errores con esta forma:
+
+{
+  "error": "string",
+  "message": "string opcional",
+  "details": "unknown opcional"
+}
+
+Modelos base
+------------
+ProviderSummary:
+{
+  "id": "uuid",
+  "full_name": "string",
+  "photo_url": "string|null",
+  "rating": "number",
+  "review_count": "number",
+  "completed_services": "number",
+  "services": "array",
+  "zones": "array",
+  "distance_km": "number|null",
+  "verified": "boolean",
+  "starting_price": "number|null"
+}
+
+Pet:
+{
+  "id": "uuid",
+  "customer_id": "uuid",
+  "name": "string",
+  "species": "string",
+  "breed": "string|null",
+  "size": "string|null",
+  "age": "number|null",
+  "photo_url": "string|null",
+  "health_notes": "string|null",
+  "behavior_notes": "string|null",
+  "emergency_notes": "string|null",
+  "qr_code_url": "string|null"
+}
+
+Booking:
+{
+  "id": "uuid",
+  "customer_id": "uuid",
+  "provider_id": "uuid",
+  "pet_ids": ["uuid"],
+  "service_id": "uuid",
+  "status": "pending|requested|scheduled|accepted|in_progress|completed|cancelled|rejected",
+  "starts_at": "iso datetime",
+  "ends_at": "iso datetime",
+  "address": "string",
+  "price": "number",
+  "currency": "string",
+  "payment_status": "string",
+  "notes": "string|null"
+}
+
+ServiceLocation:
+{
+  "booking_id": "uuid",
+  "latitude": "number",
+  "longitude": "number",
+  "accuracy": "number|null",
+  "heading": "number|null",
+  "speed": "number|null",
+  "recorded_at": "iso datetime"
+}
+
+ServicePhoto:
+{
+  "id": "uuid",
+  "booking_id": "uuid",
+  "type": "start|during|completion|incident",
+  "url": "string",
+  "latitude": "number|null",
+  "longitude": "number|null",
+  "created_at": "iso datetime"
+}
+
+ServiceReport:
+{
+  "id": "uuid",
+  "booking_id": "uuid",
+  "distance_meters": "number",
+  "duration_seconds": "number",
+  "route_url": "string|null",
+  "photos": ["ServicePhoto"],
+  "pet_status": "string",
+  "notes": "string|null",
+  "incidents": "array",
+  "created_at": "iso datetime"
+}
+
+ChatMessage:
+{
+  "id": "uuid",
+  "chat_id": "uuid",
+  "sender_id": "uuid",
+  "text": "string|null",
+  "attachment_url": "string|null",
+  "read_at": "iso datetime|null",
+  "created_at": "iso datetime"
+}
+
+Cliente / Marketplace
+---------------------
+get-service-families
+Input:
+{}
+Response:
+{
+  "families": [{ "id": "uuid", "name": "string", "slug": "string", "icon": "string|null" }]
+}
+
+get-services-by-family
+Input:
+{
+  "family_id": "uuid opcional",
+  "family_slug": "string opcional"
+}
+Response:
+{
+  "services": [{ "id": "uuid", "family_id": "uuid", "name": "string", "slug": "string", "duration_options": "array", "base_price": "number|null" }]
+}
+
+search-providers
+Input:
+{
+  "service_id": "uuid",
+  "latitude": "number opcional",
+  "longitude": "number opcional",
+  "comuna": "string opcional",
+  "date": "date opcional",
+  "pet_count": "number opcional",
+  "min_rating": "number opcional",
+  "max_price": "number opcional",
+  "limit": "number opcional",
+  "offset": "number opcional"
+}
+Response:
+{
+  "providers": ["ProviderSummary"],
+  "total": "number"
+}
+
+get-provider-profile
+Input:
+{ "provider_id": "uuid" }
+Response:
+{
+  "provider": {
+    "...ProviderSummary": true,
+    "bio": "string|null",
+    "gallery": "array",
+    "experience_years": "number|null",
+    "cancellation_policy": "string|null"
+  }
+}
+
+get-provider-reviews
+Input:
+{ "provider_id": "uuid", "limit": "number opcional", "offset": "number opcional" }
+Response:
+{
+  "reviews": [{ "id": "uuid", "rating": "number", "comment": "string|null", "customer_name": "string|null", "pet_name": "string|null", "created_at": "iso datetime" }],
+  "total": "number",
+  "summary": "object"
+}
+
+get-provider-availability
+Input:
+{ "provider_id": "uuid", "from": "date", "to": "date", "service_id": "uuid opcional" }
+Response:
+{
+  "availability": [{ "id": "uuid", "starts_at": "iso datetime", "ends_at": "iso datetime", "available": "boolean", "price": "number|null" }]
+}
+
+get-provider-pricing
+Input:
+{ "provider_id": "uuid", "service_id": "uuid opcional" }
+Response:
+{
+  "pricing": [{ "service_id": "uuid", "duration_minutes": "number", "price": "number", "currency": "string", "extra_pet_price": "number|null" }]
+}
+
+create-service-request
+Input:
+{
+  "customer_id": "uuid",
+  "service_id": "uuid",
+  "pet_ids": ["uuid"],
+  "address": "string",
+  "latitude": "number opcional",
+  "longitude": "number opcional",
+  "starts_at": "iso datetime",
+  "ends_at": "iso datetime opcional",
+  "notes": "string opcional",
+  "budget": "number opcional"
+}
+Response:
+{ "request": { "id": "uuid", "status": "string", "created_at": "iso datetime" } }
+
+get-service-request
+Input:
+{ "request_id": "uuid" }
+Response:
+{ "request": "object" }
+
+list-service-request-offers
+Input:
+{ "request_id": "uuid" }
+Response:
+{
+  "offers": [{ "id": "uuid", "provider": "ProviderSummary", "price": "number", "message": "string|null", "status": "string", "created_at": "iso datetime" }]
+}
+
+accept-service-request-offer
+Input:
+{ "offer_id": "uuid", "customer_id": "uuid" }
+Response:
+{ "booking": "Booking" }
+
+Mascotas
+--------
+get-customer-pets
+Input:
+{ "customer_id": "uuid" }
+Response:
+{ "pets": ["Pet"] }
+
+create-customer-pet
+Input:
+{
+  "customer_id": "uuid",
+  "name": "string",
+  "species": "string",
+  "breed": "string opcional",
+  "size": "string opcional",
+  "age": "number opcional",
+  "health_notes": "string opcional",
+  "behavior_notes": "string opcional"
+}
+Response:
+{ "pet": "Pet" }
+
+update-customer-pet
+Input:
+{ "pet_id": "uuid", "...fields": "campos editables de Pet" }
+Response:
+{ "pet": "Pet" }
+
+upload-pet-photo
+Input:
+{ "pet_id": "uuid", "photo_base64": "string opcional", "photo_path": "string opcional", "mime_type": "string" }
+Response:
+{ "pet": "Pet", "photo_url": "string" }
+
+get-pet-profile
+Input:
+{ "pet_id": "uuid" }
+Response:
+{ "pet": "Pet" }
+
+get-pet-qr
+Input:
+{ "pet_id": "uuid" }
+Response:
+{ "qr": { "pet_id": "uuid", "qr_code_url": "string", "public_profile_url": "string", "active": "boolean" } }
+
+report-lost-pet
+Input:
+{ "pet_id": "uuid", "last_seen_address": "string opcional", "latitude": "number opcional", "longitude": "number opcional", "message": "string opcional" }
+Response:
+{ "lost_pet_report": { "id": "uuid", "status": "string", "public_url": "string" } }
+
+resolve-lost-pet
+Input:
+{ "report_id": "uuid", "resolution_notes": "string opcional" }
+Response:
+{ "lost_pet_report": { "id": "uuid", "status": "resolved" } }
+
+submit-lost-pet-sighting
+Input:
+{ "report_id": "uuid", "name": "string opcional", "phone": "string opcional", "latitude": "number opcional", "longitude": "number opcional", "notes": "string opcional", "photo_base64": "string opcional" }
+Response:
+{ "sighting": { "id": "uuid", "created_at": "iso datetime" } }
+
+Reservas
+--------
+create-booking
+Input:
+{ "customer_id": "uuid", "provider_id": "uuid", "service_id": "uuid", "pet_ids": ["uuid"], "starts_at": "iso datetime", "ends_at": "iso datetime", "address": "string", "price": "number", "notes": "string opcional" }
+Response:
+{ "booking": "Booking" }
+
+get-booking
+Input:
+{ "booking_id": "uuid" }
+Response:
+{ "booking": "Booking" }
+
+get-customer-bookings
+Input:
+{ "customer_id": "uuid", "status": "string opcional", "limit": "number opcional", "offset": "number opcional" }
+Response:
+{ "bookings": ["Booking"], "total": "number" }
+
+get-provider-bookings
+Input:
+{ "provider_id": "uuid", "status": "string opcional", "from": "date opcional", "to": "date opcional", "limit": "number opcional", "offset": "number opcional" }
+Response:
+{ "bookings": ["Booking"], "total": "number" }
+
+accept-booking
+Input:
+{ "booking_id": "uuid", "provider_id": "uuid" }
+Response:
+{ "booking": "Booking" }
+
+reject-booking
+Input:
+{ "booking_id": "uuid", "provider_id": "uuid", "reason": "string" }
+Response:
+{ "booking": "Booking" }
+
+cancel-booking
+Input:
+{ "booking_id": "uuid", "cancelled_by": "customer|provider|admin", "reason": "string" }
+Response:
+{ "booking": "Booking", "refund": { "amount": "number", "status": "string" } }
+
+reschedule-booking
+Input:
+{ "booking_id": "uuid", "requested_by": "customer|provider|admin", "starts_at": "iso datetime", "ends_at": "iso datetime", "reason": "string opcional" }
+Response:
+{ "booking": "Booking", "reschedule_request": { "id": "uuid", "status": "string" } }
+
+confirm-booking-pin
+Input:
+{ "booking_id": "uuid", "pin": "string", "provider_id": "uuid", "type": "pickup|dropoff" }
+Response:
+{ "valid": "boolean", "booking": "Booking" }
+
+Paseo activo / Tracking
+-----------------------
+start-service
+Input:
+{ "booking_id": "uuid", "start_photo_base64": "string opcional", "start_photo_path": "string opcional", "start_latitude": "number", "start_longitude": "number", "start_address": "string opcional", "pin": "string opcional" }
+Response:
+{ "booking": "Booking", "service_session": { "id": "uuid", "started_at": "iso datetime" } }
+
+update-service-location
+Input:
+{ "booking_id": "uuid", "latitude": "number", "longitude": "number", "accuracy": "number opcional", "heading": "number opcional", "speed": "number opcional", "recorded_at": "iso datetime opcional" }
+Response:
+{ "ok": true, "location": "ServiceLocation" }
+
+get-service-location
+Input:
+{ "booking_id": "uuid" }
+Response:
+{ "location": "ServiceLocation|null" }
+
+get-service-route
+Input:
+{ "booking_id": "uuid", "from": "iso datetime opcional", "to": "iso datetime opcional" }
+Response:
+{ "route": ["ServiceLocation"], "distance_meters": "number", "duration_seconds": "number" }
+
+pause-service
+Input:
+{ "booking_id": "uuid", "reason": "string opcional" }
+Response:
+{ "booking": "Booking", "paused_at": "iso datetime" }
+
+resume-service
+Input:
+{ "booking_id": "uuid" }
+Response:
+{ "booking": "Booking", "resumed_at": "iso datetime" }
+
+complete-service
+Input:
+{ "booking_id": "uuid", "completion_photo_base64": "string opcional", "completion_photo_path": "string opcional", "completion_latitude": "number opcional", "completion_longitude": "number opcional", "notes": "string opcional" }
+Response:
+{ "booking": "Booking", "report": "ServiceReport opcional" }
+
+upload-service-photo
+Input:
+{ "booking_id": "uuid", "type": "start|during|completion|incident", "photo_base64": "string opcional", "photo_path": "string opcional", "latitude": "number opcional", "longitude": "number opcional", "notes": "string opcional" }
+Response:
+{ "photo": "ServicePhoto" }
+
+get-service-photos
+Input:
+{ "booking_id": "uuid" }
+Response:
+{ "photos": ["ServicePhoto"] }
+
+create-service-incident
+Input:
+{ "booking_id": "uuid", "type": "string", "severity": "low|medium|high|critical", "notes": "string", "latitude": "number opcional", "longitude": "number opcional", "photo_base64": "string opcional" }
+Response:
+{ "incident": { "id": "uuid", "booking_id": "uuid", "type": "string", "severity": "string", "notes": "string", "status": "string", "created_at": "iso datetime" } }
+
+get-service-incidents
+Input:
+{ "booking_id": "uuid" }
+Response:
+{ "incidents": [] }
+
+Reporte final
+-------------
+create-service-report
+Input:
+{ "booking_id": "uuid", "pet_status": "string", "notes": "string opcional", "distance_meters": "number opcional", "duration_seconds": "number opcional", "incidents": "array opcional" }
+Response:
+{ "report": "ServiceReport" }
+
+get-service-report
+Input:
+{ "booking_id": "uuid opcional", "report_id": "uuid opcional" }
+Response:
+{ "report": "ServiceReport" }
+
+submit-service-report
+Input:
+{ "report_id": "uuid" }
+Response:
+{ "report": "ServiceReport", "booking": "Booking" }
+
+get-service-summary
+Input:
+{ "booking_id": "uuid" }
+Response:
+{ "summary": { "booking": "Booking", "route": ["ServiceLocation"], "photos": ["ServicePhoto"], "report": "ServiceReport|null", "payment": "object|null" } }
+
+share-service-report
+Input:
+{ "report_id": "uuid", "channel": "link|email|whatsapp opcional" }
+Response:
+{ "share_url": "string", "expires_at": "iso datetime|null" }
+
+Chat
+----
+get-or-create-booking-chat
+Input:
+{ "booking_id": "uuid" }
+Response:
+{ "chat": { "id": "uuid", "booking_id": "uuid", "participants": "array" } }
+
+get-chat-messages
+Input:
+{ "chat_id": "uuid", "limit": "number opcional", "before": "string opcional" }
+Response:
+{ "messages": ["ChatMessage"], "next_cursor": "string|null" }
+
+send-chat-message
+Input:
+{ "chat_id": "uuid", "sender_id": "uuid", "text": "string opcional", "attachment_base64": "string opcional", "attachment_mime": "string opcional" }
+Response:
+{ "message": "ChatMessage" }
+
+mark-chat-read
+Input:
+{ "chat_id": "uuid", "user_id": "uuid", "message_id": "uuid opcional" }
+Response:
+{ "ok": true, "read_at": "iso datetime" }
+
+upload-chat-attachment
+Input:
+{ "chat_id": "uuid", "sender_id": "uuid", "file_base64": "string", "mime_type": "string", "file_name": "string opcional" }
+Response:
+{ "attachment": { "id": "uuid", "url": "string", "mime_type": "string" } }
+
+Notificaciones
+--------------
+register-push-token
+Input:
+{ "user_id": "uuid", "role": "customer|provider", "expo_push_token": "string", "platform": "ios|android" }
+Response:
+{ "ok": true }
+
+unregister-push-token
+Input:
+{ "user_id": "uuid", "expo_push_token": "string" }
+Response:
+{ "ok": true }
+
+get-notifications
+Input:
+{ "user_id": "uuid", "limit": "number opcional", "offset": "number opcional" }
+Response:
+{ "notifications": [{ "id": "uuid", "title": "string", "body": "string", "data": "object", "read_at": "iso datetime|null", "created_at": "iso datetime" }], "total": "number" }
+
+mark-notification-read
+Input:
+{ "notification_id": "uuid opcional", "notification_ids": ["uuid"] }
+Response:
+{ "ok": true }
+
+send-booking-notification
+Input:
+{ "booking_id": "uuid", "type": "string", "recipient_role": "customer|provider opcional", "data": "object opcional" }
+Response:
+{ "ok": true, "sent": "number" }
+
+Pagos
+-----
+create-payment-intent
+Input:
+{ "booking_id": "uuid", "customer_id": "uuid", "amount": "number", "currency": "string", "provider": "webpay|mercadopago|stripe opcional" }
+Response:
+{ "payment_intent": { "id": "uuid|string", "client_secret": "string|null", "status": "string", "amount": "number" } }
+
+confirm-payment
+Input:
+{ "payment_intent_id": "uuid|string", "booking_id": "uuid" }
+Response:
+{ "payment": { "id": "uuid", "status": "string", "amount": "number" }, "booking": "Booking" }
+
+get-payment-status
+Input:
+{ "booking_id": "uuid opcional", "payment_id": "uuid opcional" }
+Response:
+{ "payment": { "id": "uuid", "status": "string", "amount": "number", "provider_fee": "number", "platform_fee": "number" } }
+
+refund-payment
+Input:
+{ "payment_id": "uuid", "amount": "number opcional", "reason": "string" }
+Response:
+{ "refund": { "id": "uuid", "status": "string", "amount": "number" } }
+
+release-provider-payment
+Input:
+{ "booking_id": "uuid" }
+Response:
+{ "payout_item": { "id": "uuid", "provider_id": "uuid", "amount": "number", "status": "string" } }
+
+get-provider-balance
+Input:
+{ "provider_id": "uuid" }
+Response:
+{ "balance": { "available": "number", "pending": "number", "currency": "string" } }
+
+get-provider-payouts
+Input:
+{ "provider_id": "uuid", "limit": "number opcional", "offset": "number opcional" }
+Response:
+{ "payouts": [{ "id": "uuid", "amount": "number", "status": "string", "paid_at": "iso datetime|null" }], "total": "number" }
+
+request-provider-payout
+Input:
+{ "provider_id": "uuid", "amount": "number opcional", "bank_account_id": "uuid opcional" }
+Response:
+{ "payout": { "id": "uuid", "amount": "number", "status": "string" } }
+
+Wallet provider
+---------------
+get-wallet-transactions
+Input:
+{ "provider_id": "uuid", "limit": "number opcional", "offset": "number opcional" }
+Response:
+{ "transactions": [{ "id": "uuid", "provider_id": "uuid", "booking_id": "uuid|null", "type": "earning|payout|refund|adjustment", "amount": "number", "currency": "string", "status": "string", "description": "string|null", "created_at": "iso datetime" }], "total": "number" }
+
+get-provider-bank-accounts
+Input:
+{ "provider_id": "uuid" }
+Response:
+{ "accounts": [{ "id": "uuid", "provider_id": "uuid", "bank_name": "string", "account_type": "string", "account_number_masked": "string", "holder_name": "string", "rut": "string|null", "is_default": "boolean", "status": "string", "created_at": "iso datetime" }] }
+
+create-provider-bank-account
+Input:
+{ "provider_id": "uuid", "bank_name": "string", "account_type": "string opcional", "account_number": "string", "holder_name": "string opcional", "rut": "string opcional", "is_default": "boolean opcional" }
+Response:
+{ "account": { "id": "uuid", "bank_name": "string", "account_type": "string", "account_number_masked": "string", "is_default": "boolean", "status": "string" } }
+
+get-provider-tax-summary
+Input:
+{ "provider_id": "uuid", "period": "YYYY-MM opcional" }
+Response:
+{ "summary": { "provider_id": "uuid", "period": "string", "gross_earnings": "number", "platform_fees": "number", "payouts_total": "number", "currency": "string", "document_url": "string|null" } }
+
+Perfil provider
+---------------
+get-provider-dashboard
+Input:
+{ "provider_id": "uuid" }
+Response:
+{ "dashboard": { "provider": "object", "today": "object", "bookings": ["Booking"], "earnings": "object", "rating": "object", "active_service": "Booking|null" } }
+
+update-provider-profile
+Input:
+{ "provider_id": "uuid", "bio": "string opcional", "phone": "string opcional", "photo_url": "string opcional", "experience_years": "number opcional", "languages": "array opcional" }
+Response:
+{ "provider": "object" }
+
+update-provider-services
+Input:
+{ "provider_id": "uuid", "service_ids": ["uuid"] }
+Response:
+{ "provider_services": [] }
+
+update-provider-pricing
+Input:
+{ "provider_id": "uuid", "pricing": [{ "service_id": "uuid", "duration_minutes": "number", "price": "number" }] }
+Response:
+{ "pricing": [] }
+
+update-provider-service-zones
+Input:
+{ "provider_id": "uuid", "zones": [{ "comuna": "string", "latitude": "number opcional", "longitude": "number opcional", "radius_km": "number opcional" }] }
+Response:
+{ "zones": [] }
+
+update-provider-availability
+Input:
+{ "provider_id": "uuid", "slots": [{ "starts_at": "iso datetime", "ends_at": "iso datetime", "available": "boolean" }], "replace": "boolean opcional" }
+Response:
+{ "availability": [] }
+
+upload-provider-profile-photo
+Input:
+{ "provider_id": "uuid", "photo_base64": "string opcional", "photo_path": "string opcional", "mime_type": "string" }
+Response:
+{ "provider": "object", "photo_url": "string" }
+
+get-provider-documents
+Input:
+{ "provider_id": "uuid" }
+Response:
+{ "documents": [{ "id": "uuid", "type": "identity|background_check|bank_account|service_certificate|tax", "status": "approved|pending|rejected|expired", "title": "string|null", "url": "string|null", "expires_at": "iso datetime|null", "rejection_reason": "string|null", "updated_at": "iso datetime|null" }] }
+
+get-provider-service-zones
+Input:
+{ "provider_id": "uuid" }
+Response:
+{ "zones": [{ "id": "uuid", "comuna": "string", "radius_km": "number|null", "latitude": "number|null", "longitude": "number|null", "active": "boolean" }] }
+
+get-provider-performance
+Input:
+{ "provider_id": "uuid", "from": "date opcional", "to": "date opcional" }
+Response:
+{ "performance": { "completed": "number", "cancelled": "number", "acceptance_rate": "number", "avg_rating": "number", "earnings": "number" } }
+
+Reviews
+-------
+create-booking-review
+Input:
+{ "booking_id": "uuid", "customer_id": "uuid", "provider_id": "uuid", "rating": "number", "comment": "string opcional", "photo_urls": ["string"] }
+Response:
+{ "review": "object" }
+
+get-booking-review
+Input:
+{ "booking_id": "uuid" }
+Response:
+{ "review": "object|null" }
+
+get-provider-review-summary
+Input:
+{ "provider_id": "uuid" }
+Response:
+{ "summary": { "rating": "number", "review_count": "number", "distribution": "object" } }
+
+reply-provider-review
+Input:
+{ "review_id": "uuid", "provider_id": "uuid", "reply": "string" }
+Response:
+{ "review": "object" }
+
+Soporte / Seguridad
+-------------------
+create-support-ticket
+Input:
+{ "user_id": "uuid", "booking_id": "uuid opcional", "category": "string", "subject": "string", "message": "string", "attachments": "array opcional" }
+Response:
+{ "ticket": { "id": "uuid", "status": "string", "created_at": "iso datetime" } }
+
+get-support-ticket
+Input:
+{ "ticket_id": "uuid" }
+Response:
+{ "ticket": "object" }
+
+list-support-tickets
+Input:
+{ "user_id": "uuid", "status": "string opcional", "limit": "number opcional", "offset": "number opcional" }
+Response:
+{ "tickets": [], "total": "number" }
+
+create-emergency-alert
+Input:
+{ "booking_id": "uuid", "user_id": "uuid", "type": "string", "latitude": "number opcional", "longitude": "number opcional", "message": "string opcional" }
+Response:
+{ "alert": { "id": "uuid", "status": "string", "created_at": "iso datetime" } }
+
+get-emergency-contacts
+Input:
+{ "booking_id": "uuid opcional" }
+Response:
+{ "contacts": [{ "name": "string", "phone": "string", "type": "string" }] }
+
+get-veterinary-coverage
+Input:
+{ "booking_id": "uuid opcional", "provider_id": "uuid opcional" }
+Response:
+{ "coverage": { "active": "boolean", "amount": "number", "currency": "string", "terms_url": "string|null", "clinics": "array opcional" } }
+
+request-veterinary-assistance
+Input:
+{ "booking_id": "uuid", "pet_id": "uuid", "symptoms": "string", "latitude": "number opcional", "longitude": "number opcional" }
+Response:
+{ "assistance": { "id": "uuid", "status": "string", "clinic": "object|null", "instructions": "string" } }
+
+Cupones / Convenios
+-------------------
+validate-coupon
+Input:
+{ "code": "string", "customer_id": "uuid", "service_id": "uuid opcional", "booking_amount": "number" }
+Response:
+{ "valid": "boolean", "discount_amount": "number", "discount_type": "fixed|percentage", "message": "string" }
+
+apply-coupon
+Input:
+{ "code": "string", "booking_id": "uuid" }
+Response:
+{ "booking": "Booking", "discount": { "code": "string", "amount": "number" } }
+
+get-customer-benefits
+Input:
+{ "customer_id": "uuid" }
+Response:
+{ "benefits": [{ "id": "uuid", "title": "string", "description": "string", "code": "string|null", "expires_at": "iso datetime|null" }] }
+
+get-partner-benefits
+Input:
+{ "partner_id": "uuid opcional", "category": "string opcional" }
+Response:
+{ "benefits": [] }
+
+App cliente
+===========
+
+Base URL:
+https://erssscbpzsosmvpusnru.supabase.co/functions/v1/nod-api
+
+Header:
+{ "x-api-key": "nod_live_TU_KEY" }
+
+Autenticacion cliente
+---------------------
+login-customer
+Input:
+POST /login
+{ "email": "string", "password": "string" }
+Response:
+{ "access_token": "string", "refresh_token": "string", "user": "AuthUser", "roles": ["customer"], "customer": "Customer", "provider": null }
+Estado app:
+El login ahora tiene switch Cliente/Proveedor. La API cliente actual responde 405 en POST /login; mientras no exista, la app usa GET /customers?search=email como fallback para entrar al dashboard cliente y no enrutar al proveedor.
+
+create-customer
+Input:
+POST /customers
+{ "first_name": "string", "last_name": "string", "email": "string", "password": "string", "phone": "string", "rut": "string opcional", "address": "string opcional", "city": "string opcional" }
+Response:
+{ "user_id": "uuid", "email": "string", "customer": "Customer" }
+Estado app:
+Implementado. La app registra contra POST /customers en la base /nod-api usando la API key cliente. Tambien mantiene seleccion de cliente existente desde GET /customers.
+Permisos requeridos:
+La key cliente debe incluir escritura para POST /customers, por ejemplo customers:write o customers:create. La key validada actualmente responde /me, pero solo declara customers:read, bookings:read, purchases:read y pets:read.
+
+get-customer-profile
+Input:
+GET /customers/{customer_id}
+Response:
+{ "customer": { "id": "uuid", "full_name": "string", "first_name": "string", "last_name": "string", "email": "string", "phone": "string", "address": "string|null", "city": "string|null" } }
+
+Mascotas
+--------
+get-customer-pets
+Input:
+GET /pets?customer_id=uuid
+Response:
+{ "pets": [{ "id": "uuid", "customer_id": "uuid", "name": "string", "species": "dog", "breed": "string|null", "size": "pequeno|mediano|grande|null", "age_years": "number|null", "photo_url": "string|null", "notes": "string|null" }] }
+
+create-customer-pet
+Input:
+POST /pets
+{ "customer_id": "uuid", "name": "string", "species": "dog", "breed": "string opcional", "size": "string opcional", "age_years": "number opcional", "notes": "string opcional" }
+Response:
+{ "pet": "Pet" }
+
+Pet medical profile
+-------------------
+get-pet-medical-profile
+Input:
+GET /pets/{pet_id}/medical-profile?customer_id=uuid
+Response:
+{ "profile": { "pet_id": "uuid", "weight_kg": "string|null", "birthday": "date|null", "vaccine_status": "al_dia|pendiente|desconocido|string", "allergies": "string|null", "medications": "string|null", "microchip": "string|null", "vet_name": "string|null", "vet_phone": "string|null", "notes": "string|null", "updated_at": "iso datetime" } }
+
+upsert-pet-medical-profile
+Input:
+POST /pets/{pet_id}/medical-profile
+{ "customer_id": "uuid", "weight_kg": "string opcional", "birthday": "date opcional", "vaccine_status": "string opcional", "allergies": "string opcional", "medications": "string opcional", "microchip": "string opcional", "vet_name": "string opcional", "vet_phone": "string opcional", "notes": "string opcional" }
+Response:
+{ "profile": "PetMedicalProfile" }
+Estado app:
+Implementado localmente en el dispositivo. Falta sincronizar contra GET/POST medical-profile cuando exista el endpoint.
+
+Busqueda y reserva
+------------------
+search-providers
+Input:
+GET /providers?service_id=uuid&comuna=string&starts_at=iso datetime
+Response:
+{ "providers": [{ "id": "uuid", "full_name": "string", "photo_url": "string|null", "rating": "number|null", "review_count": "number", "completed_services": "number", "price_from": "number", "currency": "string", "zones": ["string"], "bio": "string|null" }], "total": "number" }
+Estado app:
+La app usa GET /providers. Si la API responde 404, muestra lista vacia sin fallback a /search-providers porque ese endpoint no existe en /nod-api.
+
+get-customer-bookings
+Input:
+GET /bookings?customer_id=uuid&status=string&since=date&limit=number
+Response:
+{ "bookings": ["CustomerBooking"] }
+
+create-booking
+Input:
+POST /bookings
+{ "customer_id": "uuid", "provider_id": "uuid", "pet_id": "uuid opcional", "service_id": "uuid opcional", "starts_at": "iso datetime", "ends_at": "iso datetime", "address": "string", "notes": "string opcional" }
+Response:
+{ "booking": "CustomerBooking" }
+
+cancel-booking
+Input:
+POST /bookings/{booking_id}/cancel
+{ "reason": "string opcional" }
+Response:
+{ "booking": "CustomerBooking" }
+
+Spot unlocked
+-------------
+list-customer-spots
+Input:
+GET /spots?customer_id=uuid&pet_id=uuid opcional&limit=number opcional&offset=number opcional
+Response:
+{ "spots": [{ "id": "uuid", "customer_id": "uuid", "pet_id": "uuid|null", "pet_name": "string|null", "title": "string", "category": "park|route|pet_friendly|play_zone|string", "address": "string|null", "notes": "string|null", "photo_url": "string|null", "latitude": "number|null", "longitude": "number|null", "unlocked_at": "iso datetime" }], "total": "number" }
+
+create-customer-spot
+Input:
+POST /spots
+{ "customer_id": "uuid", "pet_id": "uuid opcional", "title": "string", "category": "park|route|pet_friendly|play_zone|string", "address": "string opcional", "notes": "string opcional", "photo_base64": "string opcional", "photo_path": "string opcional", "latitude": "number opcional", "longitude": "number opcional" }
+Response:
+{ "spot": "CustomerSpotUnlock" }
+Estado app:
+Implementado localmente en el dispositivo con foto y ubicacion opcional. Falta sincronizar contra GET/POST /spots cuando exista el endpoint.
+
+Tracking cliente
+----------------
+get-service-route
+Input:
+{ "booking_id": "uuid" }
+Response:
+{ "route": ["ServiceLocation"], "distance_meters": "number", "duration_seconds": "number" }
+
+get-service-photos
+Input:
+{ "booking_id": "uuid" }
+Response:
+{ "photos": ["ServicePhoto"] }
+
+Wallet cliente
+--------------
+get-customer-wallet
+Input:
+GET /purchases?customer_id=uuid&since=date
+Response:
+{ "transactions": ["WalletTransaction"], "payment_methods": [{ "id": "uuid", "brand": "string|null", "last4": "string|null", "type": "string|null", "is_default": "boolean" }], "benefits": ["CustomerBenefit"] }
+
+Seguros medicos
+---------------
+list-insurance-plans
+Input:
+GET /insurance-plans?pet_id=uuid opcional&customer_id=uuid opcional
+Response:
+{ "plans": [{ "id": "uuid|string", "name": "string", "price": "number", "currency": "CLP", "coverage": "string", "deductible": "string", "features": ["string"], "terms_url": "string|null" }] }
+
+request-pet-insurance
+Input:
+POST /insurance-requests
+{ "customer_id": "uuid", "pet_id": "uuid", "plan_id": "uuid|string", "medical_profile": "PetMedicalProfile opcional", "payment_method_id": "uuid opcional" }
+Response:
+{ "request": { "id": "uuid", "customer_id": "uuid", "pet_id": "uuid", "plan_id": "uuid|string", "status": "requested|pending_payment|active|rejected|string", "created_at": "iso datetime" } }
+Estado app:
+Implementado como UX local con planes mock. Falta conectar GET /insurance-plans y POST /insurance-requests para contratacion real.
+
+Soporte cliente
+---------------
+create-support-ticket
+Input:
+{ "user_id": "uuid", "booking_id": "uuid opcional", "category": "walk_issue|payment_issue|string", "subject": "string", "message": "string" }
+Response:
+{ "ticket": "SupportTicket" }
