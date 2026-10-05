@@ -2,8 +2,16 @@
 
 Aplicación móvil de NOD para clientes y proveedores de servicios de mascotas. Está construida con React Native y Expo y reúne en una sola aplicación los flujos de cliente, proveedor, comunidad, matches entre mascotas y alojamiento residencial.
 
-**Versión actual:** `1.0.26` (`versionCode 28`)<br>
 **Rama de desarrollo:** `dev`
+
+## Versiones móviles
+
+| Plataforma | Versión | Build | Identificador | Estado |
+|---|---:|---:|---|---|
+| Android | `1.0.26` | `versionCode 28` | `com.nod.mobile` | APK release de QA generado y verificado |
+| iOS | `1.0.26` | `buildNumber 1` | `com.nod.mobile` | Configurado en Expo; IPA y distribución pendientes |
+
+Android y iOS comparten el código funcional y la versión pública `1.0.26`. La compilación Android fue validada localmente; la versión iOS todavía debe compilarse y probarse en Xcode/EAS con certificados, provisioning profile, APNs y credenciales OAuth de iOS.
 
 ## Estado funcional
 
@@ -122,6 +130,30 @@ npm run build:android
 ```
 
 Para publicación se deben configurar `EAS_PROJECT_ID`, Firebase/Google Services y una firma Android de producción en el entorno seguro correspondiente.
+
+## Build iOS
+
+La configuración iOS actual usa:
+
+- Bundle identifier: `com.nod.mobile`.
+- Versión: `1.0.26`.
+- Build number: `1`.
+- Compatibilidad con iPhone y iPad.
+- Permisos declarados para cámara y ubicación.
+
+Ejecución local en simulador o dispositivo de desarrollo:
+
+```bash
+npm run ios
+```
+
+Build remoto con EAS:
+
+```bash
+npm run build:ios
+```
+
+Antes de generar el IPA distribuible se deben configurar el Apple Team, certificado de distribución, provisioning profile, APNs, `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID` y el proyecto EAS definitivo. Aún no se ha certificado un build iOS en dispositivo físico ni se ha generado un IPA de producción.
 
 ## Estructura
 
