@@ -180,22 +180,15 @@ export async function getProviderBookings({
   status?: BookingStatus;
   accessToken?: string | null;
 }) {
-  const [legacyResponse, customerResponse] = await Promise.all([
-    apiRequest<Booking[] | ProviderBookingsResponse>("/get-provider-bookings", {
-      query: { provider_id: providerId, status }, accessToken
-    }).catch(() => [] as Booking[]),
-    apiRequest<Booking[] | ProviderBookingsResponse>("/bookings", {
-      query: { provider_id: providerId, status }, apiKeyKind: "customer"
-    }).catch(() => [] as Booking[])
-  ]);
-  const legacy = Array.isArray(legacyResponse) ? legacyResponse : legacyResponse.bookings ?? [];
-  const customer = Array.isArray(customerResponse) ? customerResponse : customerResponse.bookings ?? [];
-  const merged = new Map<string, Booking>();
-  [...legacy, ...customer].forEach((booking) => {
-    const id = booking.id ?? booking.booking_id ?? booking.reservation_id;
-    if (id) merged.set(id, { ...merged.get(id), ...booking });
+  const response = await apiRequest<Booking[] | ProviderBookingsResponse>("/get-provider-bookings", {
+    query: { status },
+    accessToken
   });
-  return [...merged.values()];
+
+  // Accept/reject live in the independent provider backend. Only bookings
+  // returned by that backend are actionable; IDs from nod-api are not valid
+  // inputs for /accept-booking and would always produce "Booking not found".
+  return Array.isArray(response) ? response : response.bookings ?? [];
 }
 
 export async function getProviderDashboard({
@@ -206,7 +199,6 @@ export async function getProviderDashboard({
   accessToken?: string | null;
 }): Promise<ProviderDashboard | null> {
   const response = await apiRequest<ProviderDashboard | ProviderDashboardResponse>("/get-provider-dashboard", {
-    query: { provider_id: providerId },
     accessToken
   });
 
@@ -223,7 +215,6 @@ export async function getProviderBalance({
   accessToken?: string | null;
 }): Promise<ProviderBalance | null> {
   const response = await apiRequest<ProviderBalance | ProviderBalanceResponse>("/get-provider-balance", {
-    query: { provider_id: providerId },
     accessToken
   });
 
@@ -240,7 +231,6 @@ export async function getProviderPerformance({
   accessToken?: string | null;
 }): Promise<ProviderPerformance | null> {
   const response = await apiRequest<ProviderPerformance | ProviderPerformanceResponse>("/get-provider-performance", {
-    query: { provider_id: providerId },
     accessToken
   });
 
@@ -256,18 +246,23 @@ export async function getProviderProfile({
   providerId: string;
   accessToken?: string | null;
 }) {
-  const response = await apiRequest<ProviderProfile | ProviderProfileResponse>("/get-provider-profile", {
-    query: { provider_id: providerId },
+  const response = await apiRequest<ProviderDashboard | ProviderDashboardResponse>("/get-provider-dashboard", {
     accessToken
   });
 
-  return hasOwn(response, "provider") ? response.provider as ProviderProfile | undefined : response as ProviderProfile;
+  const dashboard = hasOwn(response, "dashboard")
+    ? response.dashboard as ProviderDashboard | undefined
+    : response as ProviderDashboard;
+  return dashboard?.provider as ProviderProfile | undefined;
 }
 
 export async function updateProviderProfile({
   providerId,
   bio,
   phone,
+  address,
+  city,
+  comuna,
   experienceYears,
   languages,
   cancellationPolicy,
@@ -276,6 +271,9 @@ export async function updateProviderProfile({
   providerId: string;
   bio?: string | null;
   phone?: string | null;
+  address?: string | null;
+  city?: string | null;
+  comuna?: string | null;
   experienceYears?: number | null;
   languages?: string[];
   cancellationPolicy?: string | null;
@@ -284,9 +282,11 @@ export async function updateProviderProfile({
   const response = await apiRequest<ProviderProfile | ProviderProfileResponse>("/update-provider-profile", {
     method: "POST",
     body: {
-      provider_id: providerId,
       bio,
       phone,
+      address,
+      city,
+      comuna,
       experience_years: experienceYears,
       languages,
       cancellation_policy: cancellationPolicy
@@ -306,8 +306,8 @@ export async function getProviderPricing({
   serviceId?: string | null;
   accessToken?: string | null;
 }) {
-  const response = await apiRequest<ProviderPricing[] | ProviderPricingResponse>("/get-provider-pricing", {
-    query: { provider_id: providerId, service_id: serviceId },
+  const response = await apiRequest<ProviderPricing[] | ProviderPricingResponse>("/update-provider-pricing", {
+    query: { service_id: serviceId },
     accessToken
   });
 
@@ -326,7 +326,7 @@ export async function getProviderPayouts({
   accessToken?: string | null;
 }) {
   const response = await apiRequest<ProviderPayout[] | ProviderPayoutsResponse>("/get-provider-payouts", {
-    query: { provider_id: providerId, limit, offset },
+    query: { limit, offset },
     accessToken
   });
 
@@ -348,7 +348,7 @@ export async function getWalletTransactions({
   accessToken?: string | null;
 }) {
   const response = await apiRequest<WalletTransaction[] | WalletTransactionsResponse>("/get-wallet-transactions", {
-    query: { provider_id: providerId, limit, offset },
+    query: { limit, offset },
     accessToken
   });
 
@@ -369,7 +369,6 @@ export async function getProviderBankAccounts({
   accessToken?: string | null;
 }) {
   const response = await apiRequest<BankAccount[] | BankAccountsResponse>("/get-provider-bank-accounts", {
-    query: { provider_id: providerId },
     accessToken
   });
 
@@ -398,7 +397,6 @@ export async function createProviderBankAccount({
   const response = await apiRequest<BankAccount | BankAccountResponse>("/create-provider-bank-account", {
     method: "POST",
     body: {
-      provider_id: providerId,
       bank_name: bankName,
       account_type: accountType,
       account_number: accountNumber,
@@ -426,7 +424,7 @@ export async function getProviderTaxSummary({
   accessToken?: string | null;
 }) {
   const response = await apiRequest<ProviderTaxSummary | ProviderTaxSummaryResponse>("/get-provider-tax-summary", {
-    query: { provider_id: providerId, period },
+    query: { period },
     accessToken
   });
 
@@ -443,7 +441,6 @@ export async function getProviderDocuments({
   accessToken?: string | null;
 }) {
   const response = await apiRequest<ProviderDocument[] | ProviderDocumentsResponse>("/get-provider-documents", {
-    query: { provider_id: providerId },
     accessToken
   });
 
@@ -473,7 +470,6 @@ export async function updateProviderServiceZones({
   await apiRequest("/submit-provider-onboarding", {
     method: "POST",
     body: {
-      provider_id: providerId,
       step_key: "cat_dog_walker",
       answers: { dog_walker_zones: activeZones },
       status: "pending",
@@ -492,7 +488,6 @@ export async function updateProviderServiceZones({
 
 async function readOnboardingZones(providerId: string, accessToken?: string | null) {
   const onboarding = await apiRequest<ProviderOnboardingResponse>("/get-provider-onboarding", {
-    query: { provider_id: providerId },
     accessToken
   });
   const response = onboarding.steps.flatMap((step) => step.responses).find((item) => item.field_key === "dog_walker_zones");
@@ -511,7 +506,7 @@ export async function getProviderReviews({
   accessToken?: string | null;
 }) {
   const response = await apiRequest<ProviderReview[] | ProviderReviewsResponse>("/get-provider-reviews", {
-    query: { provider_id: providerId, limit, offset },
+    query: { limit, offset },
     accessToken
   });
 
@@ -532,7 +527,6 @@ export async function getProviderReviewSummary({
   const response = await apiRequest<ProviderReviewSummary | ProviderReviewSummaryResponse>(
     "/get-provider-review-summary",
     {
-      query: { provider_id: providerId },
       accessToken
     }
   );
@@ -559,7 +553,7 @@ export async function getOrCreateBookingChat({
 }
 
 export async function getChatMessages({
-  chatId,
+  chatId: bookingId,
   limit = 30,
   before,
   accessToken
@@ -570,7 +564,7 @@ export async function getChatMessages({
   accessToken?: string | null;
 }) {
   const response = await apiRequest<ChatMessage[] | ChatMessagesResponse>("/get-chat-messages", {
-    query: { chat_id: chatId, limit, before },
+    query: { booking_id: bookingId, limit, before },
     accessToken
   });
 
@@ -581,7 +575,7 @@ export async function getChatMessages({
 }
 
 export async function sendChatMessage({
-  chatId,
+  chatId: bookingId,
   senderId,
   text,
   accessToken
@@ -593,7 +587,7 @@ export async function sendChatMessage({
 }) {
   const response = await apiRequest<ChatMessage | ChatMessageResponse>("/send-chat-message", {
     method: "POST",
-    body: { chat_id: chatId, sender_id: senderId, text },
+    body: { booking_id: bookingId, text },
     accessToken
   });
 
@@ -601,7 +595,7 @@ export async function sendChatMessage({
 }
 
 export async function markChatRead({
-  chatId,
+  chatId: bookingId,
   userId,
   messageId,
   accessToken
@@ -613,7 +607,7 @@ export async function markChatRead({
 }) {
   return apiRequest<{ ok: boolean; read_at?: string }>("/mark-chat-read", {
     method: "POST",
-    body: { chat_id: chatId, user_id: userId, message_id: messageId },
+    body: { booking_id: bookingId, message_id: messageId },
     accessToken
   });
 }
@@ -631,7 +625,6 @@ export async function acceptBooking({
     method: "POST",
     body: {
       booking_id: bookingId,
-      provider_id: providerId
     },
     accessToken
   });
@@ -654,7 +647,6 @@ export async function rejectBooking({
     method: "POST",
     body: {
       booking_id: bookingId,
-      provider_id: providerId,
       reason
     },
     accessToken
@@ -810,7 +802,6 @@ export async function getProviderAvailability({
     "/get-provider-availability",
     {
       query: {
-        provider_id: providerId,
         from,
         to
       },
@@ -837,7 +828,7 @@ export async function getNotifications({
   accessToken?: string | null;
 }) {
   const response = await apiRequest<NotificationItem[] | NotificationsResponse>("/get-notifications", {
-    query: { user_id: userId, limit, offset },
+    query: { limit, offset },
     accessToken
   });
 
@@ -880,7 +871,7 @@ export async function listSupportTickets({
   accessToken?: string | null;
 }) {
   const response = await apiRequest<SupportTicket[] | SupportTicketsResponse>("/list-support-tickets", {
-    query: { user_id: userId, status, limit, offset },
+    query: { status, limit, offset },
     accessToken
   });
 
@@ -912,7 +903,6 @@ export async function createSupportTicket({
   const response = await apiRequest<SupportTicket | SupportTicketResponse>("/create-support-ticket", {
     method: "POST",
     body: {
-      user_id: userId,
       booking_id: bookingId,
       category,
       subject,
@@ -951,7 +941,7 @@ export async function getVeterinaryCoverage({
   accessToken?: string | null;
 }) {
   const response = await apiRequest<VeterinaryCoverage | VeterinaryCoverageResponse>("/get-veterinary-coverage", {
-    query: { booking_id: bookingId, provider_id: providerId },
+    query: { booking_id: bookingId },
     accessToken
   });
 
@@ -974,7 +964,6 @@ export async function requestProviderPayout({
   const response = await apiRequest<ProviderPayout | ProviderPayoutResponse>("/request-provider-payout", {
     method: "POST",
     body: {
-      provider_id: providerId,
       amount,
       currency
     },
@@ -1005,7 +994,6 @@ export async function createEmergencyAlert({
     method: "POST",
     body: {
       booking_id: bookingId,
-      user_id: userId,
       type,
       latitude,
       longitude,

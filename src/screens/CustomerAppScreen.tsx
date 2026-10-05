@@ -8,6 +8,7 @@ import {
   Alert,
   Image,
   KeyboardAvoidingView,
+  Linking,
   Modal,
   Platform,
   PanResponder,
@@ -24,22 +25,37 @@ import { WebView } from "react-native-webview";
 import { ApiError } from "../api/client";
 import {
   cancelCustomerBooking,
+  cancelAccountDeletionRequest,
   createBooking,
+  createAccountDeletionRequest,
   createCustomerPet,
   createCustomerReview,
   createCustomerSupportTicket,
   getCustomerBookings,
+  getCurrentAccountDeletionRequest,
   getCustomerPets,
   getCustomerProfile,
   getCustomerServicePhotos,
   getCustomerServiceRoute,
   getCustomerWallet,
+  getCustomerNotifications,
+  markCustomerNotificationRead,
   searchProviders,
   updateCustomerProfile,
+  type AccountDeletionRequest,
   type CustomerBenefit,
   type PaymentMethod
 } from "../api/customer";
 import { getChatMessages, getOrCreateBookingChat, markChatRead, sendChatMessage } from "../api/provider";
+import {
+  createMercadoPagoCheckout,
+  createWalletTopUp,
+  getBookingPayment,
+  getNodWallet,
+  payBookingWithNodCredits,
+  type CreditPackage,
+  type NodWallet
+} from "../api/payments";
 import { getServiceOptions, type CatalogOption } from "../api/catalog";
 import { blockDiscoveryPet, createDiscoverySwipe, getDiscoveryCandidates, getPetMatches, reportDiscoveryPet, sendDiscoveryMessage, undoDiscoverySwipe } from "../api/discovery";
 import type {
@@ -49,6 +65,7 @@ import type {
   DiscoveryCandidate,
   Pet,
   PetMatch,
+  NotificationItem,
   ServiceLocation,
   ServicePhoto,
   SupportTicket,
@@ -62,23 +79,19 @@ import {
   saveLocalDiscovery,
   type LocalDiscoveryState
 } from "../storage/discovery";
-import { registerPushNotifications } from "../services/pushNotifications";
+import { registerPushNotifications, type PushNotificationData } from "../services/pushNotifications";
 import { getDogBreeds } from "../api/pets";
+import { createHostingBooking, getHostingHost, getMyHostingBookings, searchHosting, updateHostingBookingStatus, type HostingBooking, type HostingDetail, type HostingHost } from "../api/hosting";
+import { createCommunitySpot, listCustomerSpots, type CommunitySpot } from "../api/spots";
+import { addCommunityComment, createCommunityPost, getCommunityFeed, toggleCommunityLike, type CommunityPost } from "../api/community";
 import { searchChileanAddresses, type AddressSuggestion } from "../api/location";
+import { getChileanComunas } from "../api/onboarding";
+import { isActiveStatus, isUpcomingStatus } from "../utils/bookingStatus";
+import { normalizeBookingStatus, normalizeText } from "../utils/normalization";
+import { env } from "../config/env";
 
-type CustomerSpotUnlock = {
-  id: string;
-  customer_id: string;
-  pet_id?: string | null;
-  pet_name?: string | null;
-  title: string;
-  category: string;
-  address?: string | null;
-  notes?: string | null;
+type CustomerSpotUnlock = CommunitySpot & {
   photo_uri?: string | null;
-  latitude?: number | null;
-  longitude?: number | null;
-  unlocked_at: string;
 };
 
 type PetMedicalProfile = {
@@ -118,7 +131,9 @@ type CustomerView =
   | "spots"
   | "insurance"
   | "safety"
-  | "dog_match";
+  | "dog_match"
+  | "residential"
+  | "notifications";
 
 const insurancePlans: InsurancePlan[] = [
   {
@@ -150,9 +165,15 @@ type Props = {
   accessToken?: string | null;
   customer: Customer;
   onLogout: () => void;
+  pushIntent?: { id: number; data: PushNotificationData } | null;
+  onPushIntentHandled?: () => void;
 };
 
-export function CustomerAppScreen({ accessToken, customer, onLogout }: Props) {
+type PendingCheckout =
+  | { kind: "booking"; bookingId: string }
+  | { kind: "topup"; previousCredits: number };
+
+export function CustomerAppScreen({ accessToken, customer, onLogout, pushIntent, onPushIntentHandled }: Props) {
   const [activeView, setActiveView] = useState<CustomerView>("home");
   const [profile, setProfile] = useState<Customer>(customer);
   const [pets, setPets] = useState<Pet[]>([]);
@@ -164,7 +185,11 @@ export function CustomerAppScreen({ accessToken, customer, onLogout }: Props) {
   const [walletTransactions, setWalletTransactions] = useState<WalletTransaction[]>([]);
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [benefits, setBenefits] = useState<CustomerBenefit[]>([]);
+  const [nodWallet, setNodWallet] = useState<NodWallet>({ available_credits: 0, pending_credits: 0, currency: "CLP" });
+  const [creditPackages, setCreditPackages] = useState<CreditPackage[]>([]);
+  const [pendingCheckout, setPendingCheckout] = useState<PendingCheckout | null>(null);
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [spotUnlocks, setSpotUnlocks] = useState<CustomerSpotUnlock[]>([]);
   const [petMedicalProfiles, setPetMedicalProfiles] = useState<PetMedicalProfile[]>([]);
   const [selectedPet, setSelectedPet] = useState<Pet | null>(null);
@@ -172,6 +197,12 @@ export function CustomerAppScreen({ accessToken, customer, onLogout }: Props) {
   useEffect(() => {
     void registerPushNotifications({ userId: customer.id, role: "customer", accessToken }).catch(() => null);
   }, [accessToken, customer.id]);
+
+  useEffect(() => {
+    if (!pushIntent) return;
+    setActiveView(getCustomerViewFromPush(pushIntent.data));
+    onPushIntentHandled?.();
+  }, [onPushIntentHandled, pushIntent]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
@@ -191,7 +222,7 @@ export function CustomerAppScreen({ accessToken, customer, onLogout }: Props) {
     setError(null);
 
     try {
-      const [nextProfile, nextPets, nextBookings, nextServices, wallet] = await Promise.all([
+      const [nextProfile, nextPets, nextBookings, nextServices, wallet, notificationResponse] = await Promise.all([
         getCustomerProfile({ customerId: customer.id, accessToken }).catch(() => customer),
         getCustomerPets({ customerId: customer.id, accessToken }).catch(() => []),
         getCustomerBookings({ customerId: customer.id, accessToken }).catch(() => []),
@@ -200,7 +231,8 @@ export function CustomerAppScreen({ accessToken, customer, onLogout }: Props) {
           transactions: [],
           payment_methods: [],
           benefits: []
-        }))
+        })),
+        getCustomerNotifications(accessToken).catch(() => ({ notifications: [], total: 0 }))
       ]);
 
       const localProfile = await loadCustomerProfileOverride(customer.id);
@@ -211,6 +243,7 @@ export function CustomerAppScreen({ accessToken, customer, onLogout }: Props) {
       setWalletTransactions(wallet.transactions ?? []);
       setPaymentMethods(wallet.payment_methods ?? []);
       setBenefits(wallet.benefits ?? []);
+      setNotifications(notificationResponse.notifications);
     } catch (currentError) {
       setError(getCustomerError(currentError));
     } finally {
@@ -223,9 +256,74 @@ export function CustomerAppScreen({ accessToken, customer, onLogout }: Props) {
     void loadHome(true);
   }, [loadHome]);
 
+  const loadNodWallet = useCallback(async () => {
+    if (!env.mercadoPagoEnabled) return;
+    const summary = await getNodWallet(accessToken).catch(() => null);
+    if (summary) {
+      setNodWallet(summary.wallet);
+      setCreditPackages(summary.packages);
+      setWalletTransactions(summary.transactions);
+    }
+  }, [accessToken]);
+
   useEffect(() => {
-    void loadSpotUnlocks(customer.id).then(setSpotUnlocks);
-  }, [customer.id]);
+    void loadNodWallet();
+  }, [loadNodWallet]);
+
+  const confirmMercadoPagoReturn = useCallback(async (url: string) => {
+    if (!url.startsWith("nod://payments/")) return;
+
+    if (url.includes("/failure")) {
+      setNotice(null);
+      setPendingCheckout(null);
+      Alert.alert("Pago no completado", "Mercado Pago informó que el pago no pudo completarse.");
+      return;
+    }
+
+    setNotice("Confirmando tu pago con el banco…");
+    const currentCheckout = pendingCheckout;
+
+    for (let attempt = 0; attempt < 10; attempt += 1) {
+      try {
+        if (currentCheckout?.kind === "booking") {
+          const payment = await getBookingPayment({ accessToken, bookingId: currentCheckout.bookingId });
+          if (payment.status.toLowerCase() === "paid") {
+            await loadHome();
+            setBookings((current) => current.map((booking) => getBookingId(booking) === currentCheckout.bookingId ? { ...booking, payment_status: "paid", payment_method: payment.method ?? "mercadopago" } : booking));
+            setSelectedBooking((current) => current && getBookingId(current) === currentCheckout.bookingId ? { ...current, payment_status: "paid", payment_method: payment.method ?? "mercadopago" } : current);
+            setNotice("Pago confirmado correctamente.");
+            setPendingCheckout(null);
+            return;
+          }
+        } else {
+          const summary = await getNodWallet(accessToken);
+          setNodWallet(summary.wallet);
+          setCreditPackages(summary.packages);
+          setWalletTransactions(summary.transactions);
+          if (currentCheckout?.kind === "topup" && summary.wallet.available_credits > currentCheckout.previousCredits) {
+            setNotice("Créditos acreditados correctamente.");
+            setPendingCheckout(null);
+            return;
+          }
+        }
+      } catch {
+        // El webhook puede seguir procesando el pago; se reintenta brevemente.
+      }
+      await wait(2000);
+    }
+
+    setNotice("Tu pago sigue pendiente de confirmación. Actualiza esta pantalla en unos instantes.");
+    setPendingCheckout(null);
+  }, [accessToken, loadHome, pendingCheckout]);
+
+  useEffect(() => {
+    const subscription = Linking.addEventListener("url", ({ url }) => void confirmMercadoPagoReturn(url));
+    return () => subscription.remove();
+  }, [confirmMercadoPagoReturn]);
+
+  useEffect(() => {
+    void listCustomerSpots({ customerId: customer.id, accessToken }).then((items) => setSpotUnlocks(items.map((spot) => ({ ...spot, photo_uri: spot.photo_url })))).catch(() => loadSpotUnlocks(customer.id).then(setSpotUnlocks));
+  }, [accessToken, customer.id]);
 
   useEffect(() => {
     void loadPetMedicalProfiles(customer.id).then(setPetMedicalProfiles);
@@ -273,11 +371,11 @@ export function CustomerAppScreen({ accessToken, customer, onLogout }: Props) {
   async function handleBookingCreated(booking: CustomerBooking) {
     setBookings((current) => sortBookings([booking, ...current]));
     setSelectedProvider(null);
-    setNotice("Reserva enviada al paseador.");
+    setNotice("Reserva enviada al proveedor.");
     setActiveView("activity");
   }
 
-  async function cancelBooking(booking: CustomerBooking) {
+  async function cancelBooking(booking: CustomerBooking, refundDestination?: RefundDestination) {
     const bookingId = getBookingId(booking);
 
     if (!bookingId) {
@@ -286,7 +384,9 @@ export function CustomerAppScreen({ accessToken, customer, onLogout }: Props) {
 
     const updatedBooking = await cancelCustomerBooking({
       bookingId,
+      customerId: customer.id,
       reason: "Cancelado por cliente desde app",
+      refundDestination,
       accessToken
     }).catch((currentError) => {
       Alert.alert("No se pudo cancelar", getCustomerError(currentError));
@@ -310,8 +410,11 @@ export function CustomerAppScreen({ accessToken, customer, onLogout }: Props) {
           accessToken={accessToken}
           booking={selectedBooking}
           customerId={customer.id}
+          nodWallet={nodWallet}
           onBack={() => setSelectedBooking(null)}
           onCancel={cancelBooking}
+          onCheckoutStarted={(bookingId) => setPendingCheckout({ kind: "booking", bookingId })}
+          onWalletChanged={loadNodWallet}
         />
       );
     }
@@ -373,7 +476,7 @@ export function CustomerAppScreen({ accessToken, customer, onLogout }: Props) {
     }
 
     if (activeView === "wallet") {
-      return <CustomerWalletView benefits={benefits} paymentMethods={paymentMethods} transactions={walletTransactions} />;
+      return <CustomerWalletView accessToken={accessToken} benefits={benefits} creditPackages={creditPackages} onCheckoutStarted={() => setPendingCheckout({ kind: "topup", previousCredits: nodWallet.available_credits })} paymentMethods={paymentMethods} transactions={walletTransactions} wallet={nodWallet} />;
     }
 
     if (activeView === "benefits") {
@@ -408,6 +511,7 @@ export function CustomerAppScreen({ accessToken, customer, onLogout }: Props) {
     if (activeView === "spots") {
       return (
         <SpotUnlocksView
+          accessToken={accessToken}
           customerId={customer.id}
           onChange={setSpotUnlocks}
           pets={pets}
@@ -420,12 +524,37 @@ export function CustomerAppScreen({ accessToken, customer, onLogout }: Props) {
       return <DogMatchView accessToken={accessToken} customerId={customer.id} pets={pets} />;
     }
 
+    if (activeView === "residential") {
+      return <ResidentialView accessToken={accessToken} customer={profile} onCreated={async (booking) => { await handleBookingCreated(booking); setSelectedBooking(booking); }} onSupport={() => setActiveView("support")} pets={pets} />;
+    }
+
     if (activeView === "safety") {
       return <SafetyCenterView accessToken={accessToken} activeBooking={activeBooking} customerId={customer.id} onOpenBooking={openBooking} onSupport={() => setActiveView("support")} />;
     }
 
     if (activeView === "profile") {
       return <CustomerProfileView accessToken={accessToken} customer={profile} onChange={setProfile} pets={pets} spots={spotUnlocks} />;
+    }
+
+    if (activeView === "notifications") {
+      return <View style={styles.notificationList}>
+        {notifications.length ? notifications.map((item) => <Pressable
+          key={item.id}
+          onPress={() => {
+            if (item.read_at) return;
+            void markCustomerNotificationRead(item.id, accessToken).then(() => {
+              setNotifications((current) => current.map((notification) => notification.id === item.id
+                ? { ...notification, read_at: new Date().toISOString() }
+                : notification));
+            }).catch(() => null);
+          }}
+          style={[styles.notificationCard, !item.read_at && styles.notificationUnread]}
+        >
+          <View style={styles.notificationHeading}><Text style={styles.notificationTitle}>{item.title}</Text>{!item.read_at ? <View style={styles.notificationDot} /> : null}</View>
+          <Text style={styles.notificationBody}>{item.body}</Text>
+          <Text style={styles.notificationDate}>{formatShortDate(item.created_at)}</Text>
+        </Pressable>) : <Text style={styles.emptyText}>No tienes notificaciones.</Text>}
+      </View>;
     }
 
     return (
@@ -449,18 +578,22 @@ export function CustomerAppScreen({ accessToken, customer, onLogout }: Props) {
   }
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={styles.screen}>
+    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.screen}>
       <ScrollView
         contentContainerStyle={styles.container}
         keyboardDismissMode="none"
         keyboardShouldPersistTaps="handled"
-        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={() => void loadHome()} />}
+        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={() => void Promise.all([loadHome(), loadNodWallet()])} />}
       >
         <View style={styles.topBar}>
           <View style={styles.brandBlock}>
             <BrandLogo size="small" />
             <Text ellipsizeMode="tail" numberOfLines={1} style={styles.title}>{customerName}</Text>
           </View>
+          <Pressable accessibilityLabel="Notificaciones" onPress={() => setActiveView("notifications")} style={styles.iconButton}>
+            <Feather color="#626D84" name="bell" size={18} />
+            {notifications.some((item) => !item.read_at) ? <View style={styles.topBarNotificationDot} /> : null}
+          </Pressable>
           <Pressable onPress={onLogout} style={styles.iconButton}>
             <Feather color="#626D84" name="log-out" size={18} />
           </Pressable>
@@ -479,6 +612,8 @@ export function CustomerAppScreen({ accessToken, customer, onLogout }: Props) {
             <Text style={styles.subHeaderTitle}>{getViewTitle(activeView)}</Text>
           </View>
         ) : null}
+
+        {activeView !== "home" && notice ? <Feedback error={null} notice={notice} /> : null}
 
         {renderContent()}
       </ScrollView>
@@ -501,6 +636,22 @@ export function CustomerAppScreen({ accessToken, customer, onLogout }: Props) {
       </View>
     </KeyboardAvoidingView>
   );
+}
+
+function getCustomerViewFromPush(data: PushNotificationData): CustomerView {
+  const target = [data.screen, data.route, data.type, data.event, data.kind]
+    .filter((value): value is string => typeof value === "string")
+    .join(" ")
+    .toLowerCase();
+
+  if (/match|dating|chat|message/.test(target)) return "dog_match";
+  if (/hosting|residential|boarding|hospedaje/.test(target)) return "residential";
+  if (/booking|reservation|walk|service|tracking/.test(target)) return "activity";
+  if (/wallet|payment|payout/.test(target)) return "wallet";
+  if (/insurance/.test(target)) return "insurance";
+  if (/pet/.test(target)) return "pets";
+  if (/profile/.test(target)) return "profile";
+  return "home";
 }
 
 function HomeView({
@@ -544,12 +695,22 @@ function HomeView({
         <View style={styles.heroIcon}>
           <Feather color="#ffffff" name="map-pin" size={28} />
         </View>
-        <Text style={styles.heroTitle}>Paseos y cuidados para tu perro</Text>
-        <Text style={styles.heroText}>{customerName}, reserva, sigue el paseo y revisa evidencias desde un solo lugar.</Text>
-        <Pressable onPress={() => void onSearch(services[0]?.value)} style={styles.primaryButton}>
+        <Text style={styles.heroTitle}>Paseos, citas y alojamiento para mascotas</Text>
+        <Text style={styles.heroText}>{customerName}, reserva, sigue el servicio y revisa evidencias desde un solo lugar.</Text>
+        <Pressable onPress={() => void onSearch(services[0]?.value)} style={[styles.primaryButton, styles.heroPrimaryButton]}>
           <Feather color="#ffffff" name="search" size={18} />
           <Text style={styles.primaryButtonText}>Buscar paseador</Text>
         </Pressable>
+        <View style={styles.heroSecondaryRow}>
+          <Pressable onPress={() => onViewChange("dog_match")} style={styles.heroSecondaryButton}>
+            <Feather color="#ffffff" name="heart" size={18} />
+            <Text style={styles.heroSecondaryButtonText}>Pet date</Text>
+          </Pressable>
+          <Pressable onPress={() => onViewChange("residential")} style={styles.heroSecondaryButton}>
+            <Feather color="#ffffff" name="moon" size={18} />
+            <Text style={styles.heroSecondaryButtonText}>Alojamiento</Text>
+          </Pressable>
+        </View>
       </View>
 
       <Feedback error={error} notice={notice} />
@@ -584,7 +745,8 @@ function HomeView({
       <View style={styles.quickGrid}>
         <QuickAction icon="search" label="Explorar" onPress={() => void onSearch(services[0]?.value)} />
         <QuickAction icon="heart" label="Mascotas" onPress={() => onViewChange("pets")} />
-        <QuickAction icon="zap" label="Conecta perros" onPress={() => onViewChange("dog_match")} />
+        <QuickAction icon="zap" label="Conecta mascotas" onPress={() => onViewChange("dog_match")} />
+        <QuickAction icon="moon" label="Residencial" onPress={() => onViewChange("residential")} />
         <QuickAction icon="clock" label="Actividad" onPress={() => onViewChange("activity")} />
         <QuickAction icon="credit-card" label="Wallet" onPress={() => onViewChange("wallet")} />
         <QuickAction icon="shield" label="Seguros" onPress={() => onViewChange("insurance")} />
@@ -757,7 +919,7 @@ const demoDiscoveryCandidates: DiscoveryCandidate[] = [
     breed: "Mestiza",
     sex: "female",
     size: "small",
-    bio: "Pequeña exploradora. Le encantan los perros pacientes y las plazas.",
+    bio: "Pequeña exploradora. Le encantan las mascotas pacientes y las plazas.",
     distance_km: 4.6,
     comuna: "Santiago",
     temperament_tags: ["Curiosa", "Dulce", "Energética"],
@@ -956,7 +1118,7 @@ function DogMatchView({ accessToken, customerId, pets }: { accessToken?: string 
   }
 
   if (!selectedPet) {
-    return <EmptyState text="Agrega un perro en Mascotas antes de buscar compañeros." />;
+    return <EmptyState text="Agrega una mascota en Mascotas antes de buscar compañeros." />;
   }
 
   return (
@@ -1072,7 +1234,7 @@ function DogMatchView({ accessToken, customerId, pets }: { accessToken?: string 
         ) : (
           <View style={styles.empty}>
             <Feather color="#EE7C2B" name="check-circle" size={28} />
-            <Text style={styles.emptyText}>Ya viste todos los perros disponibles por ahora.</Text>
+            <Text style={styles.emptyText}>Ya viste todas las mascotas disponibles por ahora.</Text>
             <Pressable onPress={() => void loadDiscovery()} style={styles.secondaryButton}><Text style={styles.secondaryButtonText}>Volver a buscar</Text></Pressable>
           </View>
         )
@@ -1287,10 +1449,18 @@ function CreateBookingView({
         customerId: customer.id,
         providerId: provider.id,
         petId,
+        petName: pets.find((pet) => pet.id === petId)?.name ?? null,
+        providerName: provider.full_name ?? null,
         serviceId,
         startsAt,
         endsAt,
         address: address.trim(),
+        comuna: bookingComuna || null,
+        city: city || null,
+        latitude: bookingLocation.latitude,
+        longitude: bookingLocation.longitude,
+        price: provider.price_from,
+        currency: provider.currency ?? "CLP",
         notes: [notes.trim(), `Ubicación: ${bookingComuna || city} (${bookingLocation.latitude.toFixed(6)}, ${bookingLocation.longitude.toFixed(6)})`].filter(Boolean).join("\n"),
         accessToken
       });
@@ -1524,6 +1694,76 @@ function PetsView({
   );
 }
 
+function ResidentialView({ accessToken, customer, onCreated, onSupport, pets }: { accessToken?: string | null; customer: Customer; onCreated: (booking: CustomerBooking) => Promise<void>; onSupport: () => void; pets: Pet[] }) {
+  const today = new Date();
+  const tomorrow = new Date(today.getTime() + 86400000);
+  const afterTomorrow = new Date(today.getTime() + 2 * 86400000);
+  const dateValue = (value: Date) => value.toISOString().slice(0, 10);
+  const [comuna, setComuna] = useState(customer.comuna ?? "Providencia");
+  const [checkIn, setCheckIn] = useState(dateValue(tomorrow));
+  const [checkOut, setCheckOut] = useState(dateValue(afterTomorrow));
+  const [hosts, setHosts] = useState<HostingHost[]>([]);
+  const [selected, setSelected] = useState<HostingDetail | null>(null);
+  const [petId, setPetId] = useState(pets[0]?.id ?? "");
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [reservationError, setReservationError] = useState(false);
+  const [bookings, setBookings] = useState<HostingBooking[]>([]);
+
+  const loadBookings = useCallback(async () => {
+    try { setBookings(await getMyHostingBookings(accessToken)); } catch { /* La búsqueda sigue disponible aunque no haya historial. */ }
+  }, [accessToken]);
+
+  const runSearch = useCallback(async () => {
+    if (new Date(checkOut) <= new Date(checkIn)) { setError("La salida debe ser posterior al ingreso."); return; }
+    setLoading(true); setError(null); setSelected(null);
+    try { setHosts((await searchHosting({ comuna, checkIn, checkOut, pets: 1, accessToken })).items); }
+    catch (currentError) { setError(getCustomerError(currentError)); }
+    finally { setLoading(false); }
+  }, [checkIn, checkOut, comuna]);
+
+  useEffect(() => { void runSearch(); void loadBookings(); }, []);
+
+  async function openHost(host: HostingHost) {
+    setLoading(true); setError(null);
+    try { setSelected(await getHostingHost(host.id, checkIn, checkOut, accessToken)); }
+    catch (currentError) { setError(getCustomerError(currentError)); }
+    finally { setLoading(false); }
+  }
+
+  async function reserve() {
+    const host = selected?.host;
+    const pet = pets.find((item) => item.id === petId);
+    if (!host || !pet) { Alert.alert("Faltan datos", "Selecciona un anfitrión y una mascota."); return; }
+    setSaving(true); setReservationError(false);
+    try {
+      const created = await createHostingBooking({ hostingProfileId: host.id, customerId: customer.id, checkIn, checkOut, petIds: [pet.id], specialInstructions: `Mascota: ${pet.name}`, accessToken });
+      if (created?.id) { await onCreated({ id: String(created.id), provider_id: host.provider_id, customer_id: customer.id, pet_id: pet.id, pet_name: pet.name, provider_name: host.host_name ?? host.title, service_name: "Hospedaje residencial", starts_at: new Date(`${checkIn}T15:00:00`).toISOString(), ends_at: new Date(`${checkOut}T12:00:00`).toISOString(), status: String(created.status ?? "PENDING"), price: Number(created.total_amount ?? 0), currency: String(created.currency ?? "CLP"), address: host.address, comuna: host.comuna }); await loadBookings(); }
+    } catch { setReservationError(true); }
+    finally { setSaving(false); }
+  }
+
+  if (selected) {
+    const host = selected.host;
+    return <>
+      <Pressable onPress={() => setSelected(null)} style={styles.secondaryButton}><Feather color="#ffffff" name="arrow-left" size={18} /><Text style={styles.secondaryButtonText}>Volver a resultados</Text></Pressable>
+      <View style={styles.panel}><Text style={styles.panelTitle}>{host.title ?? host.host_name}</Text><Text style={styles.panelText}>{host.bio}</Text>
+        <InfoRow label="Ubicación" value={[host.address, host.comuna].filter(Boolean).join(", ")} /><InfoRow label="Propiedad" value={host.property_type ?? "No indicada"} /><InfoRow label="Capacidad" value={`${host.max_pets_capacity ?? 1} mascota(s)`} /><InfoRow label="Tarifa" value={`${formatMoney(host.nightly_rate ?? 0)} por noche`} /><InfoRow label="Patio" value={host.has_yard ? "Sí" : "No"} />
+      </View>
+      {reservationError ? <View style={styles.bookingErrorCard}><Feather color="#EE7C2B" name="alert-triangle" size={28} /><Text style={styles.panelTitle}>No pudimos completar tu reserva</Text><Text style={styles.panelText}>Inténtalo de nuevo en unos minutos. Si persiste, escríbenos a soporte.</Text><ActionButton busy={saving} icon="refresh-cw" label="Reintentar" onPress={() => void reserve()} variant="primary" /><ActionButton icon="life-buoy" label="Contactar soporte" onPress={onSupport} variant="secondary" /></View> : <View style={styles.panel}><Text style={styles.panelTitle}>Solicitar estadía</Text><Text style={styles.panelText}>{checkIn} → {checkOut}</Text><Segmented items={pets.map((pet) => ({ label: pet.name, value: pet.id }))} value={petId} onChange={setPetId} /><ActionButton busy={saving} icon="calendar" label="Reservar y abrir chat" onPress={() => void reserve()} variant="primary" /></View>}
+    </>;
+  }
+
+  return <>
+    <View style={styles.panel}><Text style={styles.panelTitle}>Busca un residencial</Text><TextInput onChangeText={setComuna} placeholder="Comuna" style={styles.input} value={comuna} /><TextInput onChangeText={setCheckIn} placeholder="Ingreso YYYY-MM-DD" style={styles.input} value={checkIn} /><TextInput onChangeText={setCheckOut} placeholder="Salida YYYY-MM-DD" style={styles.input} value={checkOut} /><ActionButton busy={loading} icon="search" label="Buscar disponibilidad" onPress={() => void runSearch()} variant="primary" /></View>
+    <Feedback error={error} notice={null} />
+    {!loading && hosts.length === 0 ? <EmptyState text="No hay residenciales disponibles para estos filtros." /> : null}
+    {hosts.map((host) => <Pressable key={host.id} onPress={() => void openHost(host)} style={styles.providerCard}><View style={styles.cardCopy}><Text style={styles.cardTitle}>{host.title ?? host.host_name}</Text><Text style={styles.cardText}>{host.comuna} · {formatMoney(host.nightly_rate ?? 0)} por noche</Text><Text style={styles.cardText}>{host.has_yard ? "Con patio" : host.property_type}</Text></View><Feather color="#EE7C2B" name="chevron-right" size={20} /></Pressable>)}
+    <View style={styles.panel}><Text style={styles.panelTitle}>Mis estadías</Text>{bookings.length === 0 ? <Text style={styles.panelText}>Aún no tienes estadías reservadas.</Text> : bookings.map((booking) => <View key={booking.id} style={styles.ticket}><View style={styles.cardCopy}><Text style={styles.cardTitle}>{booking.host_name ?? "Hospedaje residencial"}</Text><Text style={styles.cardText}>{booking.check_in} → {booking.check_out}</Text><Text style={styles.statusText}>{booking.status}</Text></View>{!["COMPLETED", "CANCELLED"].includes(booking.status) ? <Pressable onPress={() => void updateHostingBookingStatus(booking.id, "CANCELLED", accessToken).then(loadBookings).catch((currentError) => Alert.alert("No se pudo cancelar", getCustomerError(currentError)))} style={styles.smallSecondaryButton}><Text style={styles.smallSecondaryButtonText}>Cancelar</Text></Pressable> : null}</View>)}</View>
+  </>;
+}
+
 function ActivityView({ bookings, onOpenBooking }: { bookings: CustomerBooking[]; onOpenBooking: (booking: CustomerBooking) => void }) {
   if (bookings.length === 0) {
     return <EmptyState text="Todavia no tienes reservas." />;
@@ -1554,21 +1794,30 @@ function BookingTrackingView({
   accessToken,
   booking,
   customerId,
+  nodWallet,
   onBack,
-  onCancel
+  onCancel,
+  onCheckoutStarted,
+  onWalletChanged
 }: {
   accessToken?: string | null;
   booking: CustomerBooking;
   customerId: string;
+  nodWallet: NodWallet;
   onBack: () => void;
-  onCancel: (booking: CustomerBooking) => Promise<void>;
+  onCancel: (booking: CustomerBooking, refundDestination?: RefundDestination) => Promise<void>;
+  onCheckoutStarted: (bookingId: string) => void;
+  onWalletChanged: () => Promise<void>;
 }) {
   const bookingId = getBookingId(booking);
   const [route, setRoute] = useState<ServiceLocation[]>([]);
   const [photos, setPhotos] = useState<ServicePhoto[]>([]);
   const [distanceMeters, setDistanceMeters] = useState<number | undefined>();
   const [durationSeconds, setDurationSeconds] = useState<number | undefined>();
+  const [trackingError, setTrackingError] = useState<string | null>(null);
   const [isCancelling, setIsCancelling] = useState(false);
+  const [isPaying, setIsPaying] = useState(false);
+  const [isPayingWithCredits, setIsPayingWithCredits] = useState(false);
 
   const loadTracking = useCallback(async () => {
     if (!bookingId) {
@@ -1576,20 +1825,67 @@ function BookingTrackingView({
     }
 
     const [routeResponse, nextPhotos] = await Promise.all([
-      getCustomerServiceRoute({ bookingId, accessToken }).catch(() => null),
+      getCustomerServiceRoute({ bookingId, accessToken }).catch((error: unknown) => {
+        setTrackingError(getFriendlyError(error));
+        return null;
+      }),
       getCustomerServicePhotos({ bookingId, accessToken }).catch(() => [])
     ]);
-    setRoute(routeResponse?.route ?? []);
+    if (routeResponse) setTrackingError(null);
+    const loadedRoute = routeResponse?.route ?? [];
+    setRoute(loadedRoute.length > 0 ? loadedRoute : getBookingEndpointRoute(booking, bookingId));
     setDistanceMeters(routeResponse?.distance_meters);
     setDurationSeconds(routeResponse?.duration_seconds);
     setPhotos(nextPhotos);
-  }, [accessToken, bookingId]);
+  }, [accessToken, booking, bookingId]);
 
   useEffect(() => {
     void loadTracking();
     const timer = setInterval(() => void loadTracking(), 15000);
     return () => clearInterval(timer);
   }, [loadTracking]);
+
+  async function openPaymentCheckout() {
+    if (!bookingId) return;
+    setIsPaying(true);
+    try {
+      const checkout = await createMercadoPagoCheckout({ bookingId, accessToken });
+      const checkoutUrl = __DEV__ ? checkout.sandbox_checkout_url || checkout.checkout_url : checkout.checkout_url;
+      if (!checkoutUrl) throw new Error("Mercado Pago no devolvió una URL de checkout.");
+      onCheckoutStarted(bookingId);
+      await Linking.openURL(checkoutUrl);
+    } catch (error) {
+      Alert.alert("No se pudo iniciar el pago", getFriendlyError(error));
+    } finally {
+      setIsPaying(false);
+    }
+  }
+
+  async function payWithCredits() {
+    if (!bookingId) return;
+    setIsPayingWithCredits(true);
+    try {
+      await payBookingWithNodCredits({ bookingId, accessToken });
+      await onWalletChanged();
+      Alert.alert("Pago realizado", "La reserva fue pagada con Créditos NOD.");
+    } catch (error) {
+      Alert.alert("No se pudo pagar con créditos", getFriendlyError(error));
+    } finally {
+      setIsPayingWithCredits(false);
+    }
+  }
+
+  async function cancelWithRefundChoice() {
+    const choice = await chooseRefundDestination(booking);
+    if (choice === null) return;
+    setIsCancelling(true);
+    try {
+      await onCancel(booking, choice);
+      if (choice) await onWalletChanged();
+    } finally {
+      setIsCancelling(false);
+    }
+  }
 
   return (
     <>
@@ -1609,9 +1905,16 @@ function BookingTrackingView({
         <InfoRow label="Direccion" value={booking.pickup_address ?? booking.address ?? "No indicada"} />
         <InfoRow label="Pago" value={booking.payment_status ? getStatusLabel(booking.payment_status) : "Por confirmar"} />
         <InfoRow label="Total" value={booking.price ? formatMoney(booking.price, booking.currency ?? "CLP") : "Por confirmar"} />
+        {env.mercadoPagoEnabled && bookingId && Number(booking.price) > 0 && !isPaidBooking(booking) ? (
+          <View style={styles.paymentAction}>
+            <Text style={styles.panelText}>Saldo disponible: {formatCredits(nodWallet.available_credits)}</Text>
+            <ActionButton busy={isPayingWithCredits} icon="zap" label="Pagar con Créditos NOD" onPress={() => void payWithCredits()} variant="secondary" />
+            <ActionButton busy={isPaying} icon="credit-card" label="Pagar con Mercado Pago" onPress={() => void openPaymentCheckout()} variant="primary" />
+          </View>
+        ) : null}
       </View>
 
-      <RoutePreview route={route} />
+      <RoutePreview error={trackingError} route={route} />
       <View style={styles.panel}>
         <Text style={styles.panelTitle}>Seguimiento</Text>
         <View style={styles.summaryGrid}>
@@ -1622,7 +1925,9 @@ function BookingTrackingView({
         </View>
       </View>
 
-      {bookingId ? <BookingCustomerChat accessToken={accessToken} bookingId={bookingId} customerId={customerId} /> : null}
+      {bookingId && !["completed", "cancelled", "rejected"].includes(normalizeStatus(booking.status)) ? (
+        <BookingCustomerChat accessToken={accessToken} bookingId={bookingId} customerId={customerId} />
+      ) : null}
 
       {bookingId && normalizeStatus(booking.status) === "completed" && booking.provider_id ? (
         <CustomerReviewForm accessToken={accessToken} bookingId={bookingId} customerId={customerId} providerId={booking.provider_id} />
@@ -1648,10 +1953,7 @@ function BookingTrackingView({
             busy={isCancelling}
             icon="slash"
             label="Cancelar"
-            onPress={() => {
-              setIsCancelling(true);
-              void onCancel(booking).finally(() => setIsCancelling(false));
-            }}
+            onPress={() => void cancelWithRefundChoice()}
             variant="secondary"
           />
         ) : null}
@@ -1665,26 +1967,41 @@ function BookingCustomerChat({ accessToken, bookingId, customerId }: { accessTok
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
+  const [chatError, setChatError] = useState<string | null>(null);
   const load = useCallback(async () => {
-    const nextChat = await getOrCreateBookingChat({ bookingId, accessToken }).catch(() => null);
+    const nextChat = await getOrCreateBookingChat({ bookingId, accessToken }).catch((error) => {
+      setChat(null);
+      setChatError(getCustomerError(error));
+      return null;
+    });
     if (!nextChat) return;
+    setChatError(null);
     setChat(nextChat);
-    const response = await getChatMessages({ chatId: nextChat.id, accessToken }).catch(() => ({ messages: [] }));
+    const response = await getChatMessages({ chatId: bookingId, accessToken }).catch((error) => {
+      setChatError(getCustomerError(error));
+      return { messages: [] };
+    });
     setMessages(response.messages);
     const last = response.messages.at(-1);
-    if (last) void markChatRead({ chatId: nextChat.id, userId: customerId, messageId: last.id, accessToken }).catch(() => null);
+    if (last) void markChatRead({ chatId: bookingId, userId: customerId, messageId: last.id, accessToken }).catch(() => null);
   }, [accessToken, bookingId, customerId]);
   useEffect(() => { void load(); const timer = setInterval(() => void load(), 10000); return () => clearInterval(timer); }, [load]);
   async function submit() {
     if (!chat || !draft.trim()) return;
     setSending(true);
-    const message = await sendChatMessage({ chatId: chat.id, senderId: customerId, text: draft.trim(), accessToken }).catch(() => null);
-    if (message) { setMessages((current) => [...current, message]); setDraft(""); }
-    setSending(false);
+    try {
+      const message = await sendChatMessage({ chatId: bookingId, senderId: customerId, text: draft.trim(), accessToken });
+      if (message) { setMessages((current) => [...current, message]); setDraft(""); setChatError(null); }
+    } catch (error) {
+      setChatError(getCustomerError(error));
+    } finally {
+      setSending(false);
+    }
   }
   return <View style={styles.panel}><Text style={styles.panelTitle}>Chat con el proveedor</Text>
+    {chatError ? <Text style={styles.error}>Chat temporalmente no disponible: {chatError}</Text> : null}
     <View style={styles.bookingChatList}>{messages.length ? messages.slice(-6).map((message) => <View key={message.id} style={[styles.matchMessage, message.sender_id === customerId && styles.matchMessageOwn]}><Text style={styles.matchMessageText}>{message.text ?? "Adjunto"}</Text></View>) : <Text style={styles.panelText}>Envía un mensaje para coordinar el servicio.</Text>}</View>
-    <View style={styles.chatComposer}><TextInput autoCorrect={false} keyboardType={Platform.OS === "android" ? "visible-password" : "default"} onChangeText={setDraft} placeholder="Escribe un mensaje…" showSoftInputOnFocus style={styles.chatInput} value={draft} /><Pressable disabled={sending || !draft.trim()} onPress={() => void submit()} style={[styles.chatSend, (sending || !draft.trim()) && { opacity: 0.5 }]}><Feather color="#ffffff" name="send" size={18} /></Pressable></View>
+    <View style={styles.chatComposer}><TextInput autoCorrect={false} editable={Boolean(chat)} keyboardType={Platform.OS === "android" ? "visible-password" : "default"} onChangeText={setDraft} placeholder={chat ? "Escribe un mensaje…" : "Chat no disponible"} showSoftInputOnFocus style={styles.chatInput} value={draft} /><Pressable disabled={sending || !chat || !draft.trim()} onPress={() => void submit()} style={[styles.chatSend, (sending || !chat || !draft.trim()) && { opacity: 0.5 }]}><Feather color="#ffffff" name="send" size={18} /></Pressable></View>
   </View>;
 }
 
@@ -1709,23 +2026,66 @@ function CustomerReviewForm({ accessToken, bookingId, customerId, providerId }: 
 }
 
 function CustomerWalletView({
+  accessToken,
   benefits,
+  creditPackages,
+  onCheckoutStarted,
   paymentMethods,
-  transactions
+  transactions,
+  wallet
 }: {
+  accessToken?: string | null;
   benefits: CustomerBenefit[];
+  creditPackages: CreditPackage[];
+  onCheckoutStarted: () => void;
   paymentMethods: PaymentMethod[];
   transactions: WalletTransaction[];
+  wallet: NodWallet;
 }) {
   const total = transactions.reduce((sum, transaction) => sum + Math.abs(transaction.amount ?? 0), 0);
+  const [loadingPackageId, setLoadingPackageId] = useState<string | null>(null);
+
+  async function topUp(packageId: string) {
+    setLoadingPackageId(packageId);
+    try {
+      const checkout = await createWalletTopUp({ accessToken, packageId });
+      const checkoutUrl = __DEV__ ? checkout.sandbox_checkout_url || checkout.checkout_url : checkout.checkout_url;
+      if (!checkoutUrl) throw new Error("Mercado Pago no devolvió una URL de checkout.");
+      onCheckoutStarted();
+      await Linking.openURL(checkoutUrl);
+    } catch (error) {
+      Alert.alert("No se pudo iniciar la recarga", getFriendlyError(error));
+    } finally {
+      setLoadingPackageId(null);
+    }
+  }
 
   return (
     <>
       <View style={styles.walletHero}>
         <Feather color="#ffffff" name="credit-card" size={28} />
         <Text style={styles.walletTitle}>Pagos y beneficios</Text>
-        <Text style={styles.walletText}>{paymentMethods.length} metodo{paymentMethods.length === 1 ? "" : "s"} de pago · {benefits.length} beneficio{benefits.length === 1 ? "" : "s"}</Text>
+        <Text style={styles.walletBalance}>{formatCredits(wallet.available_credits)}</Text>
+        <Text style={styles.walletText}>{formatCredits(wallet.pending_credits)} pendientes de confirmación</Text>
       </View>
+      {env.mercadoPagoEnabled ? (
+        <View style={styles.panel}>
+          <Text style={styles.panelTitle}>Recargar Créditos NOD</Text>
+          <Text style={styles.panelText}>1 crédito equivale a $1 CLP dentro de NOD. No es retirable ni transferible.</Text>
+          <View style={styles.creditPackages}>
+            {creditPackages.map((creditPackage) => (
+              <Pressable disabled={loadingPackageId !== null} key={creditPackage.id} onPress={() => void topUp(creditPackage.id)} style={styles.creditPackage}>
+                {loadingPackageId === creditPackage.id ? <ActivityIndicator color="#EE7C2B" /> : <Feather color="#EE7C2B" name="plus-circle" size={20} />}
+                <View style={styles.cardCopy}>
+                  <Text style={styles.cardTitle}>{creditPackage.name}</Text>
+                  <Text style={styles.cardText}>{formatCredits(creditPackage.total_credits)} por {formatMoney(creditPackage.price_amount, creditPackage.currency)}</Text>
+                  {creditPackage.bonus_credits > 0 ? <Text style={styles.creditBonus}>Incluye {formatCredits(creditPackage.bonus_credits)} de regalo</Text> : null}
+                </View>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+      ) : null}
       <View style={styles.panel}>
         <Text style={styles.panelTitle}>Metodos de pago</Text>
         {paymentMethods.length === 0 ? <Text style={styles.panelText}>No tienes metodos registrados.</Text> : null}
@@ -2134,9 +2494,21 @@ function CustomerProfileView({ accessToken, customer, onChange, pets, spots }: {
   const [address, setAddress] = useState(customer.address ?? "");
   const [comuna, setComuna] = useState(customer.comuna ?? "");
   const [city, setCity] = useState(customer.city ?? "");
+  const [comunaCatalog, setComunaCatalog] = useState<Array<{ comuna: string; region: string }>>([]);
+  const [showComunaCatalog, setShowComunaCatalog] = useState(false);
   const [suggestions, setSuggestions] = useState<AddressSuggestion[]>([]);
   const [skipSearch, setSkipSearch] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isRequestingDeletion, setIsRequestingDeletion] = useState(false);
+  const [deletionRequest, setDeletionRequest] = useState<AccountDeletionRequest | null>(null);
+
+  useEffect(() => {
+    void getChileanComunas(accessToken).then(setComunaCatalog).catch(() => setComunaCatalog([]));
+  }, [accessToken]);
+
+  useEffect(() => {
+    void getCurrentAccountDeletionRequest(accessToken).then(setDeletionRequest).catch(() => null);
+  }, [accessToken]);
 
   useEffect(() => {
     if (skipSearch) { setSkipSearch(false); return; }
@@ -2148,7 +2520,14 @@ function CustomerProfileView({ accessToken, customer, onChange, pets, spots }: {
   }, [address]);
 
   function chooseAddress(suggestion: AddressSuggestion) {
-    setSkipSearch(true); setAddress(suggestion.address); setComuna(suggestion.comuna); setCity(suggestion.city); setSuggestions([]);
+    const catalogEntry = comunaCatalog.find((item) => normalizeText(item.comuna) === normalizeText(suggestion.comuna));
+    setSkipSearch(true); setAddress(suggestion.address); setComuna(catalogEntry?.comuna ?? suggestion.comuna); setCity(catalogEntry?.region ?? suggestion.city); setSuggestions([]);
+  }
+
+  function chooseComuna(item: { comuna: string; region: string }) {
+    setComuna(item.comuna);
+    setCity(item.region);
+    setShowComunaCatalog(false);
   }
 
   async function save() {
@@ -2177,6 +2556,52 @@ function CustomerProfileView({ accessToken, customer, onChange, pets, spots }: {
     finally { setIsSaving(false); }
   }
 
+  function requestAccountDeletion() {
+    Alert.alert(
+      "Solicitar eliminación de cuenta",
+      "NOD eliminará tu perfil y datos personales sujetos a las obligaciones legales de conservación. Esta solicitud requiere verificación.",
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Enviar solicitud",
+          style: "destructive",
+          onPress: () => {
+            setIsRequestingDeletion(true);
+            void createAccountDeletionRequest({
+              reason: "Solicitud iniciada desde la aplicación móvil NOD.",
+              accessToken
+            }).then((request) => {
+              if (request) setDeletionRequest(request);
+              Alert.alert("Solicitud enviada", "Puedes consultar o cancelar la solicitud desde esta misma pantalla mientras siga pendiente.");
+            }).catch((error) => {
+              Alert.alert("No se pudo enviar", getCustomerError(error));
+            }).finally(() => setIsRequestingDeletion(false));
+          }
+        }
+      ]
+    );
+  }
+
+  function cancelDeletion() {
+    if (!deletionRequest?.id) return;
+    Alert.alert("Cancelar solicitud", "Tu cuenta permanecerá activa.", [
+      { text: "Volver", style: "cancel" },
+      {
+        text: "Cancelar solicitud",
+        style: "destructive",
+        onPress: () => {
+          setIsRequestingDeletion(true);
+          void cancelAccountDeletionRequest(deletionRequest.id, accessToken).then(() => {
+            setDeletionRequest(null);
+            Alert.alert("Solicitud cancelada", "La eliminación de tu cuenta fue cancelada.");
+          }).catch((error) => {
+            Alert.alert("No se pudo cancelar", getCustomerError(error));
+          }).finally(() => setIsRequestingDeletion(false));
+        }
+      }
+    ]);
+  }
+
   return (
     <>
       <View style={styles.panel}>
@@ -2185,7 +2610,9 @@ function CustomerProfileView({ accessToken, customer, onChange, pets, spots }: {
         <TextInput keyboardType="phone-pad" onChangeText={setPhone} placeholder="Teléfono" showSoftInputOnFocus style={styles.input} value={phone} />
         <TextInput autoCorrect={false} onChangeText={setAddress} placeholder="Buscar dirección" showSoftInputOnFocus style={styles.input} value={address} />
         {suggestions.length ? <View style={styles.bookingAddressSuggestions}>{suggestions.map((suggestion) => <Pressable key={suggestion.id} onPress={() => chooseAddress(suggestion)} style={styles.bookingAddressSuggestion}><Feather color="#EE7C2B" name="map-pin" size={17} /><Text style={styles.bookingAddressSuggestionText}>{suggestion.label}</Text></Pressable>)}</View> : null}
-        <View style={styles.actionRow}><TextInput onChangeText={setComuna} placeholder="Comuna" showSoftInputOnFocus style={[styles.input, styles.inputHalf]} value={comuna} /><TextInput onChangeText={setCity} placeholder="Ciudad" showSoftInputOnFocus style={[styles.input, styles.inputHalf]} value={city} /></View>
+        <TextInput onChangeText={(value) => { setComuna(value); setShowComunaCatalog(true); }} onFocus={() => setShowComunaCatalog(true)} placeholder="Buscar comuna" showSoftInputOnFocus style={styles.input} value={comuna} />
+        {showComunaCatalog ? <View style={styles.bookingAddressSuggestions}>{comunaCatalog.filter((item) => !comuna.trim() || normalizeText(`${item.comuna} ${item.region}`).includes(normalizeText(comuna))).slice(0, 40).map((item) => <Pressable key={`${item.region}-${item.comuna}`} onPress={() => chooseComuna(item)} style={styles.bookingAddressSuggestion}><Feather color="#EE7C2B" name="map-pin" size={17} /><View><Text style={styles.bookingAddressSuggestionText}>{item.comuna}</Text><Text style={styles.bookingLocationCaption}>{item.region}</Text></View></Pressable>)}</View> : null}
+        <TextInput editable={false} placeholder="Ciudad / región" style={[styles.input, { opacity: 0.75 }]} value={city} />
         <ActionButton busy={isSaving} icon="save" label="Guardar cambios" onPress={() => void save()} variant="primary" />
       </View>
       <View style={styles.panel}>
@@ -2201,16 +2628,31 @@ function CustomerProfileView({ accessToken, customer, onChange, pets, spots }: {
         <Detail icon="bell" text="Notificaciones de inicio, ruta, fotos y cierre del paseo." />
         <Detail icon="map-pin" text={customer.address ? `Direccion principal: ${customer.address}` : "Agrega una direccion principal para reservas mas rapidas."} />
       </View>
+      <View style={styles.panel}>
+        <Text style={styles.panelTitle}>Privacidad y cuenta</Text>
+        <Text style={styles.panelText}>Puedes solicitar la eliminación de tu cuenta y datos personales. Algunas transacciones podrán conservarse durante el plazo exigido por ley.</Text>
+        {deletionRequest ? (
+          <>
+            <InfoRow label="Estado de eliminación" value={getStatusLabel(deletionRequest.status)} />
+            {deletionRequest.requested_at ? <InfoRow label="Solicitada" value={formatShortDate(deletionRequest.requested_at)} /> : null}
+            <ActionButton busy={isRequestingDeletion} icon="x-circle" label="Cancelar solicitud" onPress={cancelDeletion} variant="secondary" />
+          </>
+        ) : (
+          <ActionButton busy={isRequestingDeletion} icon="trash-2" label="Solicitar eliminación de cuenta" onPress={requestAccountDeletion} variant="secondary" />
+        )}
+      </View>
     </>
   );
 }
 
 function SpotUnlocksView({
+  accessToken,
   customerId,
   onChange,
   pets,
   spots
 }: {
+  accessToken?: string | null;
   customerId: string;
   onChange: (spots: CustomerSpotUnlock[]) => void;
   pets: Pet[];
@@ -2224,6 +2666,16 @@ function SpotUnlocksView({
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [feed, setFeed] = useState<CommunityPost[]>([]);
+  const [feedFilter, setFeedFilter] = useState<"for_you" | "following" | "nearby">("for_you");
+  const [commentDrafts, setCommentDrafts] = useState<Record<string, string>>({});
+
+  const loadFeed = useCallback(async () => {
+    try { setFeed(await getCommunityFeed({ userId: customerId, filter: feedFilter, accessToken })); }
+    catch (currentError) { console.warn("community feed", currentError); }
+  }, [accessToken, customerId, feedFilter]);
+
+  useEffect(() => { void loadFeed(); }, [loadFeed]);
 
   async function takePhoto() {
     const permission = await ImagePicker.requestCameraPermissionsAsync();
@@ -2267,33 +2719,37 @@ function SpotUnlocksView({
 
     setIsSaving(true);
     const selectedPet = pets.find((pet) => pet.id === petId);
-    const nextSpot: CustomerSpotUnlock = {
-      id: `local-${Date.now()}`,
-      customer_id: customerId,
-      pet_id: selectedPet?.id ?? null,
-      pet_name: selectedPet?.name ?? null,
-      title: title.trim(),
-      category,
-      address: address.trim() || null,
-      notes: notes.trim() || null,
-      photo_uri: photoUri,
-      latitude: location?.latitude ?? null,
-      longitude: location?.longitude ?? null,
-      unlocked_at: new Date().toISOString()
-    };
-    const nextSpots = [nextSpot, ...spots];
-
     try {
+      const photoBase64 = photoUri ? await FileSystem.readAsStringAsync(photoUri, { encoding: FileSystem.EncodingType.Base64 }) : null;
+      const created = await createCommunitySpot({
+        customerId,
+        petId: selectedPet?.id,
+        title: title.trim(),
+        category,
+        address: address.trim() || null,
+        notes: notes.trim() || null,
+        photoBase64,
+        latitude: location?.latitude,
+        longitude: location?.longitude,
+        accessToken
+      });
+      if (!created) throw new Error("La API no devolvió el spot creado.");
+      const nextSpot: CustomerSpotUnlock = { ...created, pet_name: created.pet_name ?? selectedPet?.name ?? null, photo_uri: created.photo_url ?? photoUri };
+      const nextSpots = [nextSpot, ...spots.filter((spot) => spot.id !== nextSpot.id)];
       await saveSpotUnlocks(customerId, nextSpots);
       onChange(nextSpots);
+      if (photoBase64) {
+        await createCommunityPost({ caption: [title.trim(), notes.trim()].filter(Boolean).join(" · "), mediaBase64: photoBase64, petId: selectedPet?.id, location: address.trim() || undefined, accessToken });
+        await loadFeed();
+      }
       setTitle("");
       setAddress("");
       setNotes("");
       setPhotoUri(null);
       setLocation(null);
-      Alert.alert("Spot unlocked", "El lugar quedo guardado en tu mapa personal.");
-    } catch {
-      Alert.alert("No se pudo guardar", "Intenta nuevamente.");
+      Alert.alert("Spot unlocked", photoBase64 ? "El lugar quedó guardado y publicado en la comunidad." : "El lugar quedó sincronizado. Agrega una foto para publicarlo también en la comunidad.");
+    } catch (error) {
+      Alert.alert("No se pudo guardar", getCustomerError(error));
     } finally {
       setIsSaving(false);
     }
@@ -2363,12 +2819,36 @@ function SpotUnlocksView({
       </View>
 
       <View style={styles.panel}>
-        <Text style={styles.panelTitle}>Mapa personal</Text>
+        <Text style={styles.panelTitle}>Progreso y medallas</Text>
+        <Text style={styles.panelText}>Ganas 100 puntos por lugar y bonos por foto, GPS y variedad.</Text>
+        <View style={styles.summaryGrid}>
+          <SummaryItem icon="award" label="Puntos" value={String(getCommunityPoints(spots))} />
+          <SummaryItem icon="star" label="Medallas" value={String(getCommunityBadges(spots).length)} />
+          <SummaryItem icon="map" label="Categorías" value={String(new Set(spots.map((spot) => spot.category)).size)} />
+        </View>
+        {getCommunityBadges(spots).map((badge) => <Detail key={badge.name} icon={badge.icon} text={`${badge.name}: ${badge.description}`} />)}
+      </View>
+
+      <View style={styles.panel}>
+        <Text style={styles.panelTitle}>Comunidad y mapa personal</Text>
+        <Text style={styles.panelText}>Comparte descubrimientos, reacciona y conversa con otros tutores.</Text>
         <View style={styles.summaryGrid}>
           <SummaryItem icon="map-pin" label="Spots" value={String(spots.length)} />
           <SummaryItem icon="camera" label="Con foto" value={String(spots.filter((spot) => Boolean(spot.photo_uri)).length)} />
           <SummaryItem icon="crosshair" label="Con GPS" value={String(spots.filter((spot) => spot.latitude && spot.longitude).length)} />
         </View>
+      </View>
+
+      <View style={styles.panel}>
+        <Text style={styles.panelTitle}>Feed de la comunidad</Text>
+        <Segmented items={[{ label: "Para ti", value: "for_you" }, { label: "Siguiendo", value: "following" }, { label: "Cerca", value: "nearby" }]} onChange={(value) => setFeedFilter(value as typeof feedFilter)} value={feedFilter} />
+        {feed.length === 0 ? <Text style={styles.panelText}>Aún no hay publicaciones para este filtro.</Text> : feed.map((post) => <View key={post.id} style={styles.spotCard}>
+          {post.media_url ? <Image source={{ uri: post.media_url }} style={styles.spotImage} /> : null}
+          <View style={[styles.cardCopy, styles.spotCardBody]}><Text style={styles.cardTitle}>{post.author?.display_name ?? post.pet?.name ?? "Comunidad NOD"}</Text><Text style={styles.cardText}>{post.caption}</Text>{post.location ? <Text style={styles.cardText}><Feather name="map-pin" size={13} /> {post.location}</Text> : null}
+            <View style={styles.actionRow}><Pressable onPress={() => void toggleCommunityLike(post.id, accessToken).then(loadFeed).catch((currentError) => Alert.alert("No se pudo reaccionar", getCustomerError(currentError)))} style={styles.smallSecondaryButton}><Text style={styles.smallSecondaryButtonText}>{post.user_has_liked ? "♥" : "♡"} {post.likes_count ?? 0}</Text></Pressable><Text style={styles.cardText}>{post.comments_count ?? 0} comentarios</Text></View>
+            <View style={styles.actionRow}><TextInput onChangeText={(value) => setCommentDrafts((current) => ({ ...current, [post.id]: value }))} placeholder="Escribe un comentario" showSoftInputOnFocus style={[styles.input, styles.cardCopy]} value={commentDrafts[post.id] ?? ""} /><Pressable onPress={() => { const content = commentDrafts[post.id]?.trim(); if (!content) return; void addCommunityComment(post.id, content, petId || undefined, accessToken).then(() => { setCommentDrafts((current) => ({ ...current, [post.id]: "" })); return loadFeed(); }).catch((currentError) => Alert.alert("No se pudo comentar", getCustomerError(currentError))); }} style={styles.smallPrimaryButton}><Feather color="#ffffff" name="send" size={16} /></Pressable></View>
+          </View>
+        </View>)}
       </View>
 
       {spots.length === 0 ? <EmptyState text="Aun no desbloqueas lugares con tus mascotas." /> : null}
@@ -2422,10 +2902,6 @@ function getDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number) {
   const deltaLon = radians(lon2 - lon1);
   const a = Math.sin(deltaLat / 2) ** 2 + Math.cos(radians(lat1)) * Math.cos(radians(lat2)) * Math.sin(deltaLon / 2) ** 2;
   return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
-
-function normalizeText(value: string) {
-  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase();
 }
 
 function getEmbeddedMapUrl(latitude: number, longitude: number) {
@@ -2574,19 +3050,95 @@ function Segmented({ items, value, onChange }: { items: Array<{ label: string; v
   );
 }
 
-function RoutePreview({ route }: { route: ServiceLocation[] }) {
-  const lastPoint = route[route.length - 1];
+function RoutePreview({ error, route }: { error?: string | null; route: ServiceLocation[] }) {
+  const coordinates = route
+    .map(({ latitude, longitude }) => [Number(latitude), Number(longitude)] as const)
+    .filter(([latitude, longitude]) => Number.isFinite(latitude) && Number.isFinite(longitude));
 
   return (
     <View style={styles.routePanel}>
-      <View style={styles.routeLine} />
-      <View style={styles.routeStart} />
-      <View style={styles.routeEnd}>
-        <Feather color="#ffffff" name="navigation" size={12} />
-      </View>
-      <Text style={styles.routeText}>{lastPoint ? `${lastPoint.latitude.toFixed(5)}, ${lastPoint.longitude.toFixed(5)}` : "Ruta pendiente"}</Text>
+      {coordinates.length > 0 ? (
+        <WebView
+          javaScriptEnabled
+          originWhitelist={["*"]}
+          scrollEnabled={false}
+          source={{ html: getRouteMapHtml(coordinates) }}
+          style={styles.routeMap}
+        />
+      ) : (
+        <View style={styles.routeEmpty}>
+          <Feather color="#626D84" name={error ? "alert-circle" : "map-pin"} size={28} />
+          <Text style={styles.routeEmptyTitle}>{error ? "No pudimos cargar la ruta" : "Sin recorrido registrado"}</Text>
+          <Text style={styles.routeEmptyText}>{error ?? "Este servicio no tiene puntos GPS guardados."}</Text>
+        </View>
+      )}
     </View>
   );
+}
+
+function getRouteMapHtml(coordinates: ReadonlyArray<readonly [number, number]>) {
+  const points = JSON.stringify(coordinates);
+  return `<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"><style>html,body,#map{height:100%;margin:0} .leaflet-control-attribution{font-size:9px}</style></head><body><div id="map"></div><script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script>const points=${points};const map=L.map('map',{zoomControl:false,attributionControl:true});L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap'}).addTo(map);const line=L.polyline(points,{color:'#EE7C2B',weight:5,opacity:.95}).addTo(map);L.circleMarker(points[0],{radius:7,color:'#fff',weight:3,fillColor:'#185FA5',fillOpacity:1}).addTo(map);L.circleMarker(points[points.length-1],{radius:8,color:'#fff',weight:3,fillColor:'#EE7C2B',fillOpacity:1}).addTo(map);if(points.length===1){map.setView(points[0],16)}else{map.fitBounds(line.getBounds(),{padding:[28,28]})}</script></body></html>`;
+}
+
+function getBookingEndpointRoute(booking: CustomerBooking, bookingId: string): ServiceLocation[] {
+  const points = [
+    {
+      latitude: booking.start_latitude,
+      longitude: booking.start_longitude,
+      recorded_at: booking.started_at ?? booking.starts_at
+    },
+    {
+      latitude: booking.completion_latitude,
+      longitude: booking.completion_longitude,
+      recorded_at: booking.completed_at ?? booking.ends_at
+    }
+  ];
+
+  return points.flatMap((point) => {
+    const latitude = Number(point.latitude);
+    const longitude = Number(point.longitude);
+    return Number.isFinite(latitude) && Number.isFinite(longitude) && point.latitude != null && point.longitude != null
+      ? [{ booking_id: bookingId, latitude, longitude, recorded_at: point.recorded_at }]
+      : [];
+  });
+}
+
+function isPaidBooking(booking: CustomerBooking) {
+  return ["paid", "approved", "authorized", "captured"].includes(normalizeStatus(booking.payment_status ?? ""));
+}
+
+type RefundDestination = "original_payment_method" | "nod_credits";
+
+function chooseRefundDestination(booking: CustomerBooking): Promise<RefundDestination | undefined | null> {
+  return new Promise((resolve) => {
+    if (!isPaidBooking(booking)) {
+      Alert.alert("Cancelar servicio", "¿Confirmas que deseas cancelar esta reserva?", [
+        { text: "Volver", style: "cancel", onPress: () => resolve(null) },
+        { text: "Cancelar reserva", style: "destructive", onPress: () => resolve(undefined) }
+      ], { cancelable: true, onDismiss: () => resolve(null) });
+      return;
+    }
+
+    const paymentMethod = normalizeStatus(booking.payment_method ?? booking.payment_provider ?? "");
+    if (paymentMethod.includes("nod") || paymentMethod.includes("credit")) {
+      Alert.alert("Cancelar y devolver créditos", "Los Créditos NOD usados volverán a tu wallet.", [
+        { text: "Volver", style: "cancel", onPress: () => resolve(null) },
+        { text: "Confirmar", style: "destructive", onPress: () => resolve("nod_credits") }
+      ], { cancelable: true, onDismiss: () => resolve(null) });
+      return;
+    }
+
+    Alert.alert("¿Cómo quieres recibir la devolución?", "El reembolso al medio original puede tardar según Mercado Pago y el banco.", [
+      { text: "Volver", style: "cancel", onPress: () => resolve(null) },
+      { text: "Créditos NOD", onPress: () => resolve("nod_credits") },
+      { text: "Medio de pago original", onPress: () => resolve("original_payment_method") }
+    ], { cancelable: true, onDismiss: () => resolve(null) });
+  });
+}
+
+function formatCredits(value: number) {
+  return `${new Intl.NumberFormat("es-CL").format(Math.max(0, value))} créditos`;
 }
 
 function InfoRow({ label, value }: { label: string; value: string }) {
@@ -2622,7 +3174,7 @@ function ActionButton({
 }) {
   return (
     <Pressable disabled={busy} onPress={onPress} style={[styles.actionButton, variant === "primary" ? styles.actionPrimary : styles.actionSecondary]}>
-      {busy ? <ActivityIndicator color={variant === "primary" ? "#ffffff" : "#EE7C2B"} /> : <Feather color={variant === "primary" ? "#ffffff" : "#EE7C2B"} name={icon} size={16} />}
+      {busy ? <ActivityIndicator color="#ffffff" /> : <Feather color="#ffffff" name={icon} size={16} />}
       <Text style={[styles.actionText, variant === "primary" ? styles.actionTextPrimary : styles.actionTextSecondary]}>{label}</Text>
     </Pressable>
   );
@@ -2659,7 +3211,7 @@ function getViewTitle(view: CustomerView) {
     activity: "Actividad",
     benefits: "Beneficios",
     booking: "Reservar",
-    dog_match: "Conecta perros",
+    dog_match: "Conecta mascotas",
     explore: "Explorar",
     home: "Inicio",
     insurance: "Seguros",
@@ -2667,6 +3219,8 @@ function getViewTitle(view: CustomerView) {
     pets: "Mascotas",
     pet_profile: "Ficha mascota",
     profile: "Perfil",
+    residential: "Residencial",
+    notifications: "Notificaciones",
     spots: "Spot unlocked",
     support: "Soporte",
     wallet: "Wallet"
@@ -2689,15 +3243,15 @@ function getBookingId(booking: CustomerBooking) {
 }
 
 function isUpcomingBooking(booking: CustomerBooking) {
-  return ["pending", "requested", "scheduled", "accepted"].includes(normalizeStatus(booking.status));
+  return isUpcomingStatus(booking.status);
 }
 
 function isActiveBooking(booking: CustomerBooking) {
-  return ["in_progress", "started", "paused"].includes(normalizeStatus(booking.status));
+  return isActiveStatus(booking.status);
 }
 
 function normalizeStatus(status: string) {
-  return String(status ?? "").trim().toLowerCase().replace(/[\s-]+/g, "_");
+  return normalizeBookingStatus(status);
 }
 
 function getStatusLabel(status: string) {
@@ -2832,6 +3386,21 @@ function getSpotCategoryLabel(category: string) {
   return labels[category] ?? category;
 }
 
+function getCommunityPoints(spots: CustomerSpotUnlock[]) {
+  const categories = new Set(spots.map((spot) => spot.category)).size;
+  return spots.reduce((points, spot) => points + 100 + (spot.photo_url || spot.photo_uri ? 40 : 0) + (spot.latitude != null && spot.longitude != null ? 40 : 0), 0) + categories * 25;
+}
+
+function getCommunityBadges(spots: CustomerSpotUnlock[]): Array<{ name: string; description: string; icon: keyof typeof Feather.glyphMap }> {
+  const badges: Array<{ name: string; description: string; icon: keyof typeof Feather.glyphMap }> = [];
+  if (spots.length >= 1) badges.push({ name: "Primera huella", description: "Desbloqueaste tu primer lugar", icon: "map-pin" });
+  if (spots.filter((spot) => spot.photo_url || spot.photo_uri).length >= 3) badges.push({ name: "Fotógrafo peludo", description: "Publicaste 3 lugares con foto", icon: "camera" });
+  if (spots.filter((spot) => spot.latitude != null && spot.longitude != null).length >= 5) badges.push({ name: "Explorador GPS", description: "Registraste 5 ubicaciones verificables", icon: "compass" });
+  if (new Set(spots.map((spot) => spot.category)).size >= 4) badges.push({ name: "Guía de la ciudad", description: "Descubriste las 4 categorías", icon: "award" });
+  if (spots.length >= 10) badges.push({ name: "Leyenda NOD", description: "Llegaste a 10 spots", icon: "star" });
+  return badges;
+}
+
 function getSpotStoragePath(customerId: string) {
   return `${FileSystem.documentDirectory ?? ""}nod-spots-${customerId}.json`;
 }
@@ -2900,6 +3469,10 @@ function getCustomerError(error: unknown) {
   }
 
   return getFriendlyError(error, "No se pudo completar la acción.");
+}
+
+function wait(milliseconds: number) {
+  return new Promise<void>((resolve) => setTimeout(resolve, milliseconds));
 }
 
 const styles = StyleSheet.create({
@@ -3034,6 +3607,32 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     color: "#ffffff",
     fontSize: 14,
+    fontWeight: "900"
+  },
+  heroPrimaryButton: {
+    alignSelf: "stretch",
+    justifyContent: "center"
+  },
+  heroSecondaryRow: {
+    flexDirection: "row",
+    gap: 10
+  },
+  heroSecondaryButton: {
+    alignItems: "center",
+    backgroundColor: "#EE7C2B",
+    borderColor: "#EE7C2B",
+    borderRadius: 8,
+    borderWidth: 1,
+    flex: 1,
+    flexDirection: "row",
+    gap: 8,
+    justifyContent: "center",
+    minHeight: 46,
+    paddingHorizontal: 10
+  },
+  heroSecondaryButtonText: {
+    color: "#ffffff",
+    fontSize: 13,
     fontWeight: "900"
   },
   panel: {
@@ -3388,6 +3987,7 @@ const styles = StyleSheet.create({
   },
   secondaryButton: {
     alignItems: "center",
+    backgroundColor: "#EE7C2B",
     borderColor: "#EE7C2B",
     borderRadius: 8,
     borderWidth: 1,
@@ -3397,7 +3997,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16
   },
   secondaryButtonText: {
-    color: "#EE7C2B",
+    color: "#ffffff",
     fontSize: 13,
     fontWeight: "900"
   },
@@ -3581,8 +4181,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#EE7C2B"
   },
   actionSecondary: {
-    backgroundColor: "#EAF3DE",
-    borderColor: "#F5C4B3",
+    backgroundColor: "#EE7C2B",
+    borderColor: "#EE7C2B",
     borderWidth: 1
   },
   actionText: {
@@ -3593,7 +4193,17 @@ const styles = StyleSheet.create({
     color: "#ffffff"
   },
   actionTextSecondary: {
-    color: "#EE7C2B"
+    color: "#ffffff"
+  },
+  bookingErrorCard: {
+    alignItems: "center",
+    backgroundColor: "#FFF3E8",
+    borderColor: "#F5C9A3",
+    borderRadius: 12,
+    borderWidth: 1,
+    gap: 10,
+    marginTop: 14,
+    padding: 20
   },
   petCard: {
     alignItems: "center",
@@ -3681,43 +4291,29 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     position: "relative"
   },
-  routeLine: {
-    backgroundColor: "#EE7C2B",
-    borderRadius: 999,
-    height: 5,
-    left: "18%",
-    position: "absolute",
-    top: "54%",
-    transform: [{ rotate: "-18deg" }],
-    width: "64%"
+  paymentAction: {
+    marginTop: 14
   },
-  routeStart: {
-    backgroundColor: "#185FA5",
-    borderRadius: 16,
-    height: 32,
-    left: "12%",
-    position: "absolute",
-    top: "58%",
-    width: 32
+  routeMap: {
+    flex: 1
   },
-  routeEnd: {
+  routeEmpty: {
     alignItems: "center",
-    backgroundColor: "#EE7C2B",
-    borderRadius: 18,
-    height: 36,
+    flex: 1,
     justifyContent: "center",
-    position: "absolute",
-    right: "12%",
-    top: "34%",
-    width: 36
+    padding: 24
   },
-  routeText: {
-    bottom: 14,
+  routeEmptyTitle: {
     color: "#1D2330",
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: "900",
-    left: 14,
-    position: "absolute"
+    marginTop: 10
+  },
+  routeEmptyText: {
+    color: "#626D84",
+    fontSize: 13,
+    marginTop: 5,
+    textAlign: "center"
   },
   photoGrid: {
     flexDirection: "row",
@@ -3770,6 +4366,30 @@ const styles = StyleSheet.create({
     color: "#E7E0DA",
     fontSize: 14,
     fontWeight: "800"
+  },
+  walletBalance: {
+    color: "#ffffff",
+    fontSize: 34,
+    fontWeight: "900"
+  },
+  creditPackages: {
+    gap: 10,
+    marginTop: 12
+  },
+  creditPackage: {
+    alignItems: "center",
+    borderColor: "#E7E0DA",
+    borderRadius: 10,
+    borderWidth: 1,
+    flexDirection: "row",
+    gap: 10,
+    padding: 14
+  },
+  creditBonus: {
+    color: "#367D5F",
+    fontSize: 12,
+    fontWeight: "900",
+    marginTop: 3
   },
   benefitCard: {
     alignItems: "flex-start",
@@ -3833,6 +4453,32 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 12,
     paddingVertical: 12
+  },
+  ticket: {
+    alignItems: "center",
+    borderTopColor: "#E7E0DA",
+    borderTopWidth: 1,
+    flexDirection: "row",
+    gap: 12,
+    paddingVertical: 12
+  },
+  smallSecondaryButton: {
+    alignItems: "center",
+    borderColor: "#EE7C2B",
+    borderRadius: 8,
+    borderWidth: 1,
+    justifyContent: "center",
+    minHeight: 38,
+    paddingHorizontal: 12
+  },
+  smallSecondaryButtonText: { color: "#EE7C2B", fontSize: 12, fontWeight: "900" },
+  smallPrimaryButton: {
+    alignItems: "center",
+    backgroundColor: "#EE7C2B",
+    borderRadius: 8,
+    height: 46,
+    justifyContent: "center",
+    width: 46
   },
   spotPreviewImage: {
     backgroundColor: "#E7E0DA",
@@ -3942,6 +4588,61 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     marginTop: 10,
     textAlign: "center"
+  },
+  notificationList: {
+    gap: 10,
+    paddingVertical: 8
+  },
+  notificationCard: {
+    backgroundColor: "#ffffff",
+    borderColor: "#E7E0DA",
+    borderRadius: 10,
+    borderWidth: 1,
+    gap: 6,
+    padding: 14
+  },
+  notificationUnread: {
+    backgroundColor: "#FFF4EC",
+    borderColor: "#F3B183"
+  },
+  notificationHeading: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 8,
+    justifyContent: "space-between"
+  },
+  notificationTitle: {
+    color: "#1D2330",
+    flex: 1,
+    fontSize: 15,
+    fontWeight: "900"
+  },
+  notificationBody: {
+    color: "#626D84",
+    fontSize: 13,
+    lineHeight: 19
+  },
+  notificationDate: {
+    color: "#8991A2",
+    fontSize: 11,
+    fontWeight: "700"
+  },
+  notificationDot: {
+    backgroundColor: "#EE7C2B",
+    borderRadius: 5,
+    height: 9,
+    width: 9
+  },
+  topBarNotificationDot: {
+    backgroundColor: "#EE7C2B",
+    borderColor: "#FCFAF7",
+    borderRadius: 5,
+    borderWidth: 1,
+    height: 9,
+    position: "absolute",
+    right: 8,
+    top: 7,
+    width: 9
   },
   loading: {
     alignItems: "center",

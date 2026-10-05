@@ -17,10 +17,19 @@ export function loginWithPassword(email: string, password: string, apiKeyKind?: 
   });
 }
 
-export function refreshLogin(refreshToken: string) {
+export function loginWithGoogleToken(idToken: string, role: "customer" | "provider") {
+  return apiRequest<LoginResponse>(role === "customer" ? "/auth/google" : "/auth-google", {
+    method: "POST",
+    body: { id_token: idToken },
+    apiKeyKind: role
+  });
+}
+
+export function refreshLogin(refreshToken: string, role: "provider" | "customer" = "provider") {
   return apiRequest<LoginResponse>("/login", {
     method: "POST",
-    body: { refresh_token: refreshToken }
+    body: { refresh_token: refreshToken },
+    apiKeyKind: role
   });
 }
 

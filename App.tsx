@@ -6,16 +6,24 @@ import { StatusBar } from "expo-status-bar";
 import { refreshLogin } from "./src/api/auth";
 import { getProviderOnboarding } from "./src/api/onboarding";
 import { CustomerAppScreen } from "./src/screens/CustomerAppScreen";
+import { CompleteCustomerProfileScreen } from "./src/screens/CompleteCustomerProfileScreen";
 import { LoginScreen } from "./src/screens/LoginScreen";
 import { OnboardingScreen } from "./src/screens/OnboardingScreen";
 import { ProviderDashboardScreen } from "./src/screens/ProviderDashboardScreen";
 import { RegisterCustomerScreen } from "./src/screens/RegisterCustomerScreen";
 import { RegisterScreen } from "./src/screens/RegisterScreen";
+import { RoleSelectionScreen } from "./src/screens/RoleSelectionScreen";
+import { WelcomeScreen } from "./src/screens/WelcomeScreen";
 import { clearSession, loadSession, saveSession, type Session } from "./src/storage/session";
 import type { Customer, Provider } from "./src/types/api";
 import { BrandLogo } from "./src/components/BrandLogo";
+import {
+  subscribeToPushNotifications,
+  unregisterPushNotifications,
+  type PushNotificationData
+} from "./src/services/pushNotifications";
 
-type Route = "loading" | "login" | "register" | "registerCustomer" | "customer" | "onboarding" | "verification" | "approved";
+type Route = "loading" | "welcome" | "roleSelection" | "login" | "register" | "registerCustomer" | "completeCustomerProfile" | "customer" | "onboarding" | "verification" | "approved";
 
 export default function App() {
   const [route, setRoute] = useState<Route>("loading");
@@ -24,49 +32,60 @@ export default function App() {
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [isRefreshingProvider, setIsRefreshingProvider] = useState(false);
+  const [pushIntent, setPushIntent] = useState<{ id: number; data: PushNotificationData } | null>(null);
 
   useEffect(() => {
     async function hydrate() {
       const storedSession = await loadSession();
 
       if (!storedSession) {
-        setRoute("login");
+        setRoute("welcome");
         return;
       }
 
       const nowInSeconds = Math.floor(Date.now() / 1000);
       const activeSession =
         storedSession.expires_at <= nowInSeconds
-          ? await refreshStoredSession(storedSession.refresh_token)
+          ? await refreshStoredSession(storedSession)
           : storedSession;
 
       setSession(activeSession);
-      setProvider(activeSession?.provider ?? null);
+      setProvider(getProviderFromSession(activeSession));
       setCustomer(getCustomerFromSession(activeSession));
-      setRoute(getSessionRoute(activeSession));
+      setRoute(activeSession ? getSessionRoute(activeSession) : "welcome");
     }
 
     void hydrate();
   }, []);
 
+  useEffect(() => subscribeToPushNotifications({
+    onResponse: (data) => setPushIntent({ id: Date.now(), data })
+  }), []);
+
+  useEffect(() => {
+    if (!pushIntent || !session) return;
+    setRoute(getSessionRoute(session));
+  }, [pushIntent, session]);
+
   function handleLogin(nextSession: Session) {
     setSession(nextSession);
-    setProvider(nextSession.provider);
+    setProvider(getProviderFromSession(nextSession));
     setCustomer(getCustomerFromSession(nextSession));
     setNotice(null);
     setRoute(getSessionRoute(nextSession));
 
-    if (!nextSession.provider && !nextSession.customer) {
+    if (!getProviderFromSession(nextSession) && !getCustomerFromSession(nextSession)) {
       setNotice("La sesion no tiene un perfil asociado.");
     }
   }
 
   function handleRegistered(nextSession: Session) {
+    const nextProvider = getProviderFromSession(nextSession);
     setSession(nextSession);
-    setProvider(nextSession.provider);
+    setProvider(nextProvider);
     setCustomer(getCustomerFromSession(nextSession));
 
-    if (nextSession.provider) {
+    if (nextProvider) {
       setNotice(`Cuenta creada para ${nextSession.user.email}. Completa el onboarding.`);
       setRoute("onboarding");
     } else {
@@ -75,18 +94,29 @@ export default function App() {
     }
   }
 
-  function handleLogout() {
-    setSession(null);
-    setProvider(null);
-    setCustomer(null);
-    setNotice(null);
-    setRoute("login");
+  async function handleLogout() {
+    try {
+      await unregisterPushNotifications(session?.access_token);
+    } catch (error) {
+      console.warn("[NOD Push] No fue posible desregistrar el dispositivo al cerrar sesion.", error);
+    } finally {
+      await clearSession();
+      setSession(null);
+      setProvider(null);
+      setCustomer(null);
+      setPushIntent(null);
+      setNotice(null);
+      setRoute("login");
+    }
   }
 
-  function handleCustomerSelected(nextCustomer: Customer) {
+  async function handleCustomerProfileCompleted(nextCustomer: Customer) {
     setCustomer(nextCustomer);
-    setProvider(null);
-    setNotice(null);
+    if (session) {
+      const nextSession = { ...session, customer: nextCustomer };
+      setSession(nextSession);
+      await saveSession(nextSession);
+    }
     setRoute("customer");
   }
 
@@ -145,12 +175,26 @@ export default function App() {
         <>
           {notice ? <Text style={styles.inlineNotice}>{notice}</Text> : null}
           <LoginScreen
-            onCustomerLogin={handleCustomerSelected}
             onLogin={handleLogin}
             onRegister={() => setRoute("register")}
             onRegisterCustomer={() => setRoute("registerCustomer")}
           />
         </>
+      ) : null}
+
+      {route === "welcome" ? (
+        <WelcomeScreen
+          onLogin={() => setRoute("login")}
+          onRegister={() => setRoute("roleSelection")}
+        />
+      ) : null}
+
+      {route === "roleSelection" ? (
+        <RoleSelectionScreen
+          onBack={() => setRoute("welcome")}
+          onLogin={() => setRoute("login")}
+          onSelect={(role) => setRoute(role === "customer" ? "registerCustomer" : "register")}
+        />
       ) : null}
 
       {route === "register" ? (
@@ -160,7 +204,7 @@ export default function App() {
       {route === "registerCustomer" ? (
         <RegisterCustomerScreen
           onBack={() => setRoute("login")}
-          onCustomerSelected={handleCustomerSelected}
+          onGoogleAuthenticated={handleLogin}
         />
       ) : null}
 
@@ -187,6 +231,8 @@ export default function App() {
           accessToken={session?.access_token}
           onLogout={handleLogout}
           provider={provider}
+          pushIntent={pushIntent}
+          onPushIntentHandled={() => setPushIntent(null)}
         />
       ) : null}
 
@@ -195,6 +241,16 @@ export default function App() {
           accessToken={session?.access_token}
           customer={customer}
           onLogout={handleLogout}
+          pushIntent={pushIntent}
+          onPushIntentHandled={() => setPushIntent(null)}
+        />
+      ) : null}
+
+      {route === "completeCustomerProfile" && customer && session ? (
+        <CompleteCustomerProfileScreen
+          customer={customer}
+          onComplete={(nextCustomer) => void handleCustomerProfileCompleted(nextCustomer)}
+          session={session}
         />
       ) : null}
     </SafeAreaProvider>
@@ -207,10 +263,20 @@ function getSessionRoute(session: Session | null): Route {
   }
 
   if (session.customer || session.roles?.some((role) => ["customer", "client"].includes(role))) {
-    return "customer";
+    const customer = getCustomerFromSession(session);
+    return session.is_new_user || !customer?.phone || !customer?.rut ? "completeCustomerProfile" : "customer";
   }
 
-  return getProviderRoute(session.provider);
+  return getProviderRoute(getProviderFromSession(session));
+}
+
+function getProviderFromSession(session: Session | null): Provider | null {
+  if (!session) return null;
+  if (session.provider) return session.provider;
+  if (session.needs_onboarding || session.roles?.includes("provider")) {
+    return { id: session.user.id, full_name: session.user.email, status: "onboarding", onboarding_step: "profile" };
+  }
+  return null;
 }
 
 function getCustomerFromSession(session: Session | null): Customer | null {
@@ -317,9 +383,12 @@ function isApprovedProvider(provider: Provider) {
     || ["approved", "active", "verified"].includes(String(provider.onboarding_step ?? "").toLowerCase());
 }
 
-async function refreshStoredSession(refreshToken: string) {
+async function refreshStoredSession(storedSession: Session) {
   try {
-    const session = await refreshLogin(refreshToken);
+    const role = storedSession.customer || storedSession.roles?.some((item) => ["customer", "client"].includes(item))
+      ? "customer"
+      : "provider";
+    const session = await refreshLogin(storedSession.refresh_token, role);
     await saveSession(session);
     return session;
   } catch {

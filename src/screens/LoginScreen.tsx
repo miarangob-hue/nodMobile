@@ -15,16 +15,14 @@ import {
 import { Feather } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { BrandLogo } from "../components/BrandLogo";
+import { AuthDivider, GoogleAuthButton } from "../components/GoogleAuthButton";
 import { loginWithPassword } from "../api/auth";
-import { ApiError } from "../api/client";
-import { listCustomers } from "../api/customer";
 import { assertRuntimeConfig } from "../config/env";
 import { loadLoginMode, saveLoginMode, saveSession, type Session } from "../storage/session";
-import type { Customer } from "../types/api";
 import { getFriendlyError } from "../utils/errors";
+import { authenticateWithGoogle, isGoogleSignInCancellation } from "../services/googleAuth";
 
 type Props = {
-  onCustomerLogin: (customer: Customer) => void;
   onLogin: (session: Session) => void;
   onRegisterCustomer: () => void;
   onRegister: () => void;
@@ -32,12 +30,13 @@ type Props = {
 
 type LoginMode = "customer" | "provider";
 
-export function LoginScreen({ onCustomerLogin, onLogin, onRegister, onRegisterCustomer }: Props) {
+export function LoginScreen({ onLogin, onRegister, onRegisterCustomer }: Props) {
   const [mode, setMode] = useState<LoginMode>("customer");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
@@ -55,15 +54,10 @@ export function LoginScreen({ onCustomerLogin, onLogin, onRegister, onRegisterCu
     setIsLoading(true);
 
     try {
-      assertRuntimeConfig();
-      if (mode === "customer") {
-        const customer = await loginCustomer(email.trim(), password);
-        onCustomerLogin(customer);
-      } else {
-        const session = await loginWithPassword(email.trim(), password, "provider");
-        await saveSession(session);
-        onLogin(session);
-      }
+      assertRuntimeConfig(mode);
+      const session = await loginWithPassword(email.trim(), password, mode);
+      await saveSession(session);
+      onLogin(session);
     } catch (currentError) {
       setError(getFriendlyError(currentError, "No se pudo iniciar sesión."));
     } finally {
@@ -71,10 +65,29 @@ export function LoginScreen({ onCustomerLogin, onLogin, onRegister, onRegisterCu
     }
   }
 
+  async function handleGoogleLogin() {
+    setError(null);
+    setIsGoogleLoading(true);
+
+    try {
+      assertRuntimeConfig(mode);
+      const session = await authenticateWithGoogle(mode);
+      if (!session) return;
+      await saveSession(session);
+      onLogin(session);
+    } catch (currentError) {
+      if (!isGoogleSignInCancellation(currentError)) {
+        setError(getFriendlyError(currentError, "No se pudo continuar con Google."));
+      }
+    } finally {
+      setIsGoogleLoading(false);
+    }
+  }
+
   return (
     <SafeAreaView edges={["top", "bottom"]} style={styles.safeArea}>
     <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
       style={styles.container}
     >
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
@@ -149,6 +162,14 @@ export function LoginScreen({ onCustomerLogin, onLogin, onRegister, onRegisterCu
           )}
         </Pressable>
 
+        <AuthDivider />
+        <GoogleAuthButton
+          disabled={isLoading}
+          label={`Continuar con Google como ${mode === "customer" ? "cliente" : "proveedor"}`}
+          loading={isGoogleLoading}
+          onPress={() => void handleGoogleLogin()}
+        />
+
         {mode === "provider" ? <Pressable onPress={onRegister} style={styles.secondaryButton}>
           <Text style={styles.secondaryText}>Crear cuenta de proveedor</Text>
         </Pressable> : null}
@@ -161,29 +182,6 @@ export function LoginScreen({ onCustomerLogin, onLogin, onRegister, onRegisterCu
     </KeyboardAvoidingView>
     </SafeAreaView>
   );
-}
-
-async function loginCustomer(email: string, password: string) {
-  try {
-    const session = await loginWithPassword(email, password, "customer", false);
-    if (session.customer) {
-      return session.customer;
-    }
-  } catch (currentError) {
-    if (!(currentError instanceof ApiError) || ![404, 405].includes(currentError.status)) {
-      throw currentError;
-    }
-  }
-
-  const response = await listCustomers({ search: email });
-  const customer = response.customers.find((current) => current.email?.toLowerCase() === email.toLowerCase())
-    ?? response.customers[0];
-
-  if (!customer) {
-    throw new Error("No encontramos un cliente con ese email.");
-  }
-
-  return customer;
 }
 
 const styles = StyleSheet.create({
@@ -322,11 +320,13 @@ const styles = StyleSheet.create({
   },
   secondaryButton: {
     alignItems: "center",
+    backgroundColor: "#EE7C2B",
+    borderRadius: 8,
     minHeight: 48,
     justifyContent: "center"
   },
   secondaryText: {
-    color: "#EE7C2B",
+    color: "#ffffff",
     fontSize: 15,
     fontWeight: "700"
   }

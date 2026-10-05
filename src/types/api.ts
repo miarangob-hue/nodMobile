@@ -11,6 +11,8 @@ export type Provider = {
   first_name?: string;
   last_name?: string;
   city?: string | null;
+  address?: string | null;
+  comuna?: string | null;
   comunas?: string[];
   status?: string;
   onboarding_step?: string | null;
@@ -127,6 +129,10 @@ export type Booking = {
   price?: number | null;
   currency?: string | null;
   payment_status?: string | null;
+  payment_method?: "mercadopago" | "nod_credits" | string | null;
+  payment_provider?: string | null;
+  refund_status?: string | null;
+  refund_destination?: "original_payment_method" | "nod_credits" | string | null;
   status: BookingStatus;
   provider_status?: string | null;
   provider_response_status?: string | null;
@@ -153,6 +159,10 @@ export type Booking = {
   completion_notes?: string | null;
   notes?: string | null;
   address?: string | null;
+  comuna?: string | null;
+  city?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
 };
 
 export type CustomerBooking = Booking & {
@@ -247,6 +257,9 @@ export type ProviderProfile = {
   full_name?: string | null;
   bio?: string | null;
   phone?: string | null;
+  address?: string | null;
+  city?: string | null;
+  comuna?: string | null;
   photo_url?: string | null;
   rating?: number | null;
   review_count?: number | null;
@@ -430,6 +443,8 @@ export type LoginResponse = {
   expires_at: number;
   user: AuthUser;
   roles: string[];
+  is_new_user?: boolean;
+  needs_onboarding?: boolean;
   customer?: Customer | null;
   provider: Provider | null;
 };

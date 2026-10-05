@@ -20,7 +20,7 @@ type MatchesResponse = {
 
 export async function getDiscoveryCandidates({
   petId,
-  customerId,
+  customerId: _customerId,
   cursor,
   limit = 20,
   accessToken
@@ -32,7 +32,7 @@ export async function getDiscoveryCandidates({
   accessToken?: string | null;
 }) {
   const response = await apiRequest<CandidatesResponse>("/discovery/candidates", {
-    query: { pet_id: petId, customer_id: customerId, cursor, limit },
+    query: { pet_id: petId, cursor, limit },
     apiKeyKind: "customer",
     warnOnError: false,
     accessToken
@@ -46,7 +46,7 @@ export async function getDiscoveryCandidates({
 
 export function createDiscoverySwipe({
   actorPetId,
-  customerId,
+  customerId: _customerId,
   targetPetId,
   decision,
   accessToken
@@ -61,7 +61,6 @@ export function createDiscoverySwipe({
     method: "POST",
     body: {
       actor_pet_id: actorPetId,
-      customer_id: customerId,
       target_pet_id: targetPetId,
       decision
     },
@@ -73,7 +72,7 @@ export function createDiscoverySwipe({
 
 export async function getPetMatches({
   petId,
-  customerId,
+  customerId: _customerId,
   cursor,
   limit = 20,
   accessToken
@@ -85,7 +84,7 @@ export async function getPetMatches({
   accessToken?: string | null;
 }) {
   const response = await apiRequest<MatchesResponse>("/matches", {
-    query: { pet_id: petId, customer_id: customerId, cursor, limit },
+    query: { pet_id: petId, cursor, limit },
     apiKeyKind: "customer",
     warnOnError: false,
     accessToken
@@ -97,18 +96,18 @@ export async function getPetMatches({
   };
 }
 
-export function undoDiscoverySwipe({ actorPetId, customerId, targetPetId, accessToken }: { actorPetId: string; customerId: string; targetPetId: string; accessToken?: string | null }) {
-  return apiRequest<{ ok: boolean }>("/discovery/swipes/undo", { method: "POST", body: { actor_pet_id: actorPetId, customer_id: customerId, target_pet_id: targetPetId }, apiKeyKind: "customer", warnOnError: false, accessToken });
+export function undoDiscoverySwipe({ actorPetId, customerId: _customerId, targetPetId, accessToken }: { actorPetId: string; customerId: string; targetPetId: string; accessToken?: string | null }) {
+  return apiRequest<{ ok: boolean }>("/discovery/swipes/undo", { method: "POST", body: { actor_pet_id: actorPetId, target_pet_id: targetPetId }, apiKeyKind: "customer", warnOnError: false, accessToken });
 }
 
-export function blockDiscoveryPet({ actorPetId, customerId, targetPetId, accessToken }: { actorPetId: string; customerId: string; targetPetId: string; accessToken?: string | null }) {
-  return apiRequest<{ ok: boolean }>("/discovery/blocks", { method: "POST", body: { actor_pet_id: actorPetId, customer_id: customerId, target_pet_id: targetPetId }, apiKeyKind: "customer", warnOnError: false, accessToken });
+export function blockDiscoveryPet({ actorPetId, customerId: _customerId, targetPetId, accessToken }: { actorPetId: string; customerId: string; targetPetId: string; accessToken?: string | null }) {
+  return apiRequest<{ ok: boolean }>("/discovery/blocks", { method: "POST", body: { actor_pet_id: actorPetId, target_pet_id: targetPetId }, apiKeyKind: "customer", warnOnError: false, accessToken });
 }
 
-export function reportDiscoveryPet({ actorPetId, customerId, targetPetId, reason, accessToken }: { actorPetId: string; customerId: string; targetPetId: string; reason: string; accessToken?: string | null }) {
-  return apiRequest<{ ok: boolean }>("/discovery/reports", { method: "POST", body: { actor_pet_id: actorPetId, customer_id: customerId, target_pet_id: targetPetId, reason }, apiKeyKind: "customer", warnOnError: false, accessToken });
+export function reportDiscoveryPet({ actorPetId, customerId: _customerId, targetPetId, reason, accessToken }: { actorPetId: string; customerId: string; targetPetId: string; reason: string; accessToken?: string | null }) {
+  return apiRequest<{ ok: boolean }>("/discovery/reports", { method: "POST", body: { actor_pet_id: actorPetId, target_pet_id: targetPetId, reason }, apiKeyKind: "customer", warnOnError: false, accessToken });
 }
 
-export function sendDiscoveryMessage({ matchId, customerId, text, accessToken }: { matchId: string; customerId: string; text: string; accessToken?: string | null }) {
-  return apiRequest<{ id: string; created_at: string }>(`/matches/${matchId}/messages`, { method: "POST", body: { customer_id: customerId, text }, apiKeyKind: "customer", warnOnError: false, accessToken });
+export function sendDiscoveryMessage({ matchId, customerId: _customerId, text, accessToken }: { matchId: string; customerId: string; text: string; accessToken?: string | null }) {
+  return apiRequest<{ id: string; created_at: string }>(`/matches/${matchId}/messages`, { method: "POST", body: { text }, apiKeyKind: "customer", warnOnError: false, accessToken });
 }

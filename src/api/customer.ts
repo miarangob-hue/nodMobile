@@ -3,6 +3,7 @@ import type {
   Customer,
   CustomerBooking,
   CustomerProvider,
+  NotificationItem,
   Pet,
   ServiceLocation,
   ServicePhoto,
@@ -107,27 +108,30 @@ export async function listCustomers({
 }
 
 export async function getCustomerProfile({
-  customerId,
+  customerId: _customerId,
   accessToken
 }: {
   customerId: string;
   accessToken?: string | null;
 }) {
-  const response = await apiRequest<Customer | CustomerResponse>(`/customers/${customerId}`, {
+  const response = await apiRequest<Customer | CustomerResponse | Customer[] | CustomersResponse>("/customers", {
     apiKeyKind: "customer",
     accessToken
   });
 
+  if (Array.isArray(response)) return response[0];
   return hasOwn(response, "customer")
     ? response.customer as Customer | undefined
     : hasOwn(response, "data")
-      ? response.data as Customer | undefined
+      ? (Array.isArray(response.data) ? response.data[0] : response.data) as Customer | undefined
+      : hasOwn(response, "customers")
+        ? (response.customers as Customer[] | undefined)?.[0]
       : response as Customer;
 }
 
 export async function updateCustomerProfile({ customerId, values, accessToken }: {
   customerId: string;
-  values: Partial<Pick<Customer, "full_name" | "first_name" | "last_name" | "phone" | "address" | "comuna" | "city">>;
+  values: Partial<Pick<Customer, "full_name" | "first_name" | "last_name" | "phone" | "rut" | "address" | "comuna" | "city">>;
   accessToken?: string | null;
 }) {
   const response = await apiRequest<Customer | CustomerResponse>(`/customers/${customerId}`, {
@@ -140,14 +144,13 @@ export async function updateCustomerProfile({ customerId, values, accessToken }:
 }
 
 export async function getCustomerPets({
-  customerId,
+  customerId: _customerId,
   accessToken
 }: {
   customerId: string;
   accessToken?: string | null;
 }) {
   const response = await apiRequest<Pet[] | PetsResponse>("/pets", {
-    query: { customer_id: customerId },
     apiKeyKind: "customer",
     accessToken
   });
@@ -156,7 +159,7 @@ export async function getCustomerPets({
 }
 
 export async function createCustomerPet({
-  customerId,
+  customerId: _customerId,
   name,
   species,
   breed,
@@ -177,7 +180,6 @@ export async function createCustomerPet({
   const response = await apiRequest<Pet | PetResponse>("/pets", {
     method: "POST",
     body: {
-      customer_id: customerId,
       name,
       species,
       breed,
@@ -245,87 +247,125 @@ export async function searchProviders({
 }
 
 export async function getCustomerBookings({
-  customerId,
+  customerId: _customerId,
   accessToken
 }: {
   customerId: string;
   accessToken?: string | null;
 }) {
   const response = await apiRequest<CustomerBooking[] | BookingsResponse>("/bookings", {
-    query: { customer_id: customerId },
     apiKeyKind: "customer",
     accessToken
   });
 
-  return Array.isArray(response) ? response : response.bookings ?? response.reservations ?? response.data ?? [];
+  const bookings = Array.isArray(response) ? response : response.bookings ?? response.reservations ?? response.data ?? [];
+  return bookings.map(hydrateProviderBookingMetadata);
 }
 
 export async function createBooking({
-  customerId,
+  customerId: _customerId,
   providerId,
   petId,
+  petName,
+  providerName,
   serviceId,
   startsAt,
   endsAt,
   address,
+  comuna,
+  city,
+  latitude,
+  longitude,
+  price,
+  currency,
   notes,
   accessToken
 }: {
   customerId: string;
   providerId: string;
   petId?: string | null;
+  petName?: string | null;
+  providerName?: string | null;
   serviceId?: string | null;
   startsAt: string;
   endsAt: string;
   address: string;
+  comuna?: string | null;
+  city?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  price?: number | null;
+  currency?: string | null;
   notes?: string | null;
   accessToken?: string | null;
 }) {
   const response = await apiRequest<BookingResponse>("/bookings", {
     method: "POST",
     body: {
-      customer_id: customerId,
       provider_id: providerId,
       pet_id: petId,
       service_id: serviceId,
       starts_at: startsAt,
       ends_at: endsAt,
       address,
-      notes
+      comuna,
+      city,
+      latitude,
+      longitude,
+      price,
+      currency,
+      notes: appendProviderBookingMetadata(notes, {
+        pet_id: petId,
+        pet_name: petName,
+        provider_name: providerName,
+        address,
+        comuna,
+        city,
+        latitude,
+        longitude,
+        price,
+        currency
+      })
     },
     apiKeyKind: "customer",
     accessToken
   });
 
-  return getBookingFromResponse(response);
+  const booking = getBookingFromResponse(response);
+  return booking ? hydrateProviderBookingMetadata({
+    ...booking,
+    pet_id: booking.pet_id ?? petId,
+    pet_name: booking.pet_name ?? petName,
+    provider_name: booking.provider_name ?? providerName,
+    address: booking.address ?? address,
+    comuna: booking.comuna ?? comuna,
+    city: booking.city ?? city,
+    latitude: booking.latitude ?? latitude,
+    longitude: booking.longitude ?? longitude
+  }) : undefined;
 }
 
 export async function cancelCustomerBooking({
   bookingId,
+  customerId: _customerId,
   reason,
+  refundDestination,
   accessToken
 }: {
   bookingId: string;
+  customerId: string;
   reason?: string;
+  refundDestination?: "original_payment_method" | "nod_credits";
   accessToken?: string | null;
 }) {
-  const response = await apiRequest<BookingResponse>(`/bookings/${bookingId}/cancel`, {
+  const response = await apiRequest<BookingResponse>(`/bookings/${encodeURIComponent(bookingId)}/cancel`, {
     method: "POST",
-    body: { reason },
+    body: {
+      reason,
+      refund_destination: refundDestination
+    },
     apiKeyKind: "customer",
-    warnOnError: false,
     accessToken
-  }).catch((currentError) => {
-    if (currentError instanceof ApiError && currentError.status === 404) {
-      return apiRequest<BookingResponse>("/cancel-booking", {
-        method: "POST",
-        body: { booking_id: bookingId, reason },
-        apiKeyKind: "customer",
-        accessToken
-      });
-    }
-
-    throw currentError;
   });
 
   return getBookingFromResponse(response);
@@ -341,29 +381,20 @@ export async function getCustomerServiceRoute({
   const response = await apiRequest<ServiceLocation[] | RouteResponse>(`/bookings/${bookingId}/route`, {
     query: { booking_id: bookingId },
     apiKeyKind: "customer",
-    warnOnError: false,
     accessToken
-  }).catch((currentError) => {
-    if (currentError instanceof ApiError && currentError.status === 404) {
-      return apiRequest<ServiceLocation[] | RouteResponse>("/get-service-route", {
-        query: { booking_id: bookingId },
-        apiKeyKind: "customer",
-        accessToken
-      });
-    }
-
-    throw currentError;
   });
 
-  if (Array.isArray(response)) {
-    return { route: response, distance_meters: undefined, duration_seconds: undefined };
-  }
-
-  return {
+  const normalized = Array.isArray(response) ? {
+    route: response,
+    distance_meters: undefined,
+    duration_seconds: undefined
+  } : {
     route: response.route ?? response.locations ?? [],
     distance_meters: response.distance_meters,
     duration_seconds: response.duration_seconds
   };
+
+  return normalized;
 }
 
 export async function getCustomerServicePhotos({
@@ -378,30 +409,19 @@ export async function getCustomerServicePhotos({
     apiKeyKind: "customer",
     warnOnError: false,
     accessToken
-  }).catch((currentError) => {
-    if (currentError instanceof ApiError && currentError.status === 404) {
-      return apiRequest<ServicePhoto[] | PhotosResponse>("/get-service-photos", {
-        query: { booking_id: bookingId },
-        apiKeyKind: "customer",
-        accessToken
-      });
-    }
-
-    throw currentError;
   });
 
   return Array.isArray(response) ? response : response.photos ?? [];
 }
 
 export async function getCustomerWallet({
-  customerId,
+  customerId: _customerId,
   accessToken
 }: {
   customerId: string;
   accessToken?: string | null;
 }) {
   const purchases = await apiRequest<WalletTransaction[] | { purchases?: WalletTransaction[]; data?: WalletTransaction[] }>("/purchases", {
-    query: { customer_id: customerId },
     apiKeyKind: "customer",
     accessToken
   }).catch((): { purchases?: WalletTransaction[]; data?: WalletTransaction[] } => ({ purchases: [] }));
@@ -417,7 +437,7 @@ export async function getCustomerWallet({
 }
 
 export async function createCustomerSupportTicket({
-  customerId,
+  customerId: _customerId,
   bookingId,
   category,
   subject,
@@ -434,7 +454,6 @@ export async function createCustomerSupportTicket({
   const response = await apiRequest<SupportTicket | { ticket?: SupportTicket }>("/create-support-ticket", {
     method: "POST",
     body: {
-      user_id: customerId,
       booking_id: bookingId,
       category,
       subject,
@@ -447,12 +466,76 @@ export async function createCustomerSupportTicket({
   return hasOwn(response, "ticket") ? response.ticket as SupportTicket | undefined : response as SupportTicket;
 }
 
-export function createCustomerReview({ customerId, bookingId, providerId, rating, comment, accessToken }: {
+export async function getCustomerNotifications(accessToken?: string | null, limit = 30, offset = 0) {
+  const response = await apiRequest<NotificationItem[] | { notifications?: NotificationItem[]; data?: NotificationItem[]; total?: number }>("/notifications", {
+    query: { limit, offset },
+    apiKeyKind: "customer",
+    accessToken
+  });
+  const notifications = Array.isArray(response) ? response : response.notifications ?? response.data ?? [];
+  return { notifications, total: Array.isArray(response) ? response.length : response.total ?? notifications.length };
+}
+
+export function markCustomerNotificationRead(notificationId: string, accessToken?: string | null) {
+  return apiRequest<{ ok: boolean; read_at?: string }>(`/notifications/${encodeURIComponent(notificationId)}/read`, {
+    method: "POST",
+    body: {},
+    apiKeyKind: "customer",
+    accessToken
+  });
+}
+
+export function createCustomerReview({ customerId: _customerId, bookingId, providerId, rating, comment, accessToken }: {
   customerId: string; bookingId: string; providerId: string; rating: number; comment?: string | null; accessToken?: string | null;
 }) {
   return apiRequest("/create-provider-review", {
     method: "POST",
-    body: { customer_id: customerId, booking_id: bookingId, provider_id: providerId, rating, comment },
+    body: { booking_id: bookingId, provider_id: providerId, rating, comment },
+    apiKeyKind: "customer",
+    accessToken
+  });
+}
+
+export type AccountDeletionRequest = {
+  id: string;
+  status: string;
+  requested_at?: string | null;
+  scheduled_for?: string | null;
+  reason?: string | null;
+};
+
+export async function createAccountDeletionRequest({ reason, accessToken }: {
+  reason?: string | null;
+  accessToken?: string | null;
+}) {
+  const response = await apiRequest<AccountDeletionRequest | { request?: AccountDeletionRequest }>("/account-deletion-requests", {
+    method: "POST",
+    body: { reason },
+    apiKeyKind: "customer",
+    accessToken
+  });
+
+  return hasOwn(response, "request") ? response.request as AccountDeletionRequest | undefined : response as AccountDeletionRequest;
+}
+
+export async function getCurrentAccountDeletionRequest(accessToken?: string | null) {
+  const response = await apiRequest<AccountDeletionRequest | { request?: AccountDeletionRequest }>("/account-deletion-requests/current", {
+    apiKeyKind: "customer",
+    warnOnError: false,
+    accessToken
+  }).catch((error) => {
+    if (error instanceof ApiError && error.status === 404) return null;
+    throw error;
+  });
+
+  if (!response) return null;
+  return hasOwn(response, "request") ? response.request as AccountDeletionRequest | undefined ?? null : response as AccountDeletionRequest;
+}
+
+export async function cancelAccountDeletionRequest(requestId: string, accessToken?: string | null) {
+  return apiRequest<{ ok: boolean; status?: string }>(`/account-deletion-requests/${encodeURIComponent(requestId)}/cancel`, {
+    method: "POST",
+    body: {},
     apiKeyKind: "customer",
     accessToken
   });
@@ -472,6 +555,43 @@ function getBookingFromResponse(response: BookingResponse | null | undefined) {
   }
 
   return response as CustomerBooking;
+}
+
+const providerBookingMetadataPrefix = "[NOD_MOBILE_META]";
+
+type ProviderBookingMetadata = Pick<CustomerBooking,
+  "pet_id" | "pet_name" | "provider_name" | "address" | "comuna" | "city" | "latitude" | "longitude" | "price" | "currency"
+>;
+
+function appendProviderBookingMetadata(notes: string | null | undefined, metadata: ProviderBookingMetadata) {
+  const encoded = JSON.stringify(metadata);
+  return [notes?.trim(), `${providerBookingMetadataPrefix}${encoded}`].filter(Boolean).join("\n");
+}
+
+function hydrateProviderBookingMetadata(booking: CustomerBooking) {
+  const marker = booking.notes?.lastIndexOf(providerBookingMetadataPrefix) ?? -1;
+  if (marker < 0) return booking;
+
+  try {
+    const metadata = JSON.parse(booking.notes!.slice(marker + providerBookingMetadataPrefix.length)) as ProviderBookingMetadata;
+    return {
+      ...metadata,
+      ...booking,
+      pet_id: booking.pet_id ?? metadata.pet_id,
+      pet_name: booking.pet_name ?? metadata.pet_name,
+      provider_name: booking.provider_name ?? metadata.provider_name,
+      address: booking.address ?? metadata.address,
+      comuna: booking.comuna ?? metadata.comuna,
+      city: booking.city ?? metadata.city,
+      latitude: booking.latitude ?? metadata.latitude,
+      longitude: booking.longitude ?? metadata.longitude,
+      price: booking.price ?? metadata.price,
+      currency: booking.currency ?? metadata.currency,
+      notes: booking.notes!.slice(0, marker).trim() || null
+    };
+  } catch {
+    return booking;
+  }
 }
 
 function hasOwn<T extends object, K extends PropertyKey>(value: T, key: K): value is T & Record<K, unknown> {

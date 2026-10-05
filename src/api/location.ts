@@ -21,12 +21,15 @@ export async function searchChileanAddresses(query: string): Promise<AddressSugg
   if (!response.ok) throw new Error("No se pudieron buscar direcciones.");
 
   const body = await response.json() as { features?: Array<{ geometry?: { coordinates?: number[] }; properties?: Record<string, unknown> }> };
-  return (body.features ?? []).map((feature, index) => {
+  const suggestions = (body.features ?? []).map((feature, index) => {
     const p = feature.properties ?? {};
     const street = String(p.street ?? p.name ?? "");
     const number = String(p.housenumber ?? "");
     const comuna = String(p.district ?? p.city ?? p.county ?? "");
-    const city = String(p.city ?? p.county ?? p.state ?? "");
+    const rawCity = String(p.city ?? "");
+    const county = String(p.county ?? "");
+    const state = String(p.state ?? "");
+    const city = getChileanCity({ comuna, county, rawCity, state });
     const address = [street, number].filter(Boolean).join(" ");
     const label = [address, comuna, city].filter((value, position, values) => value && values.indexOf(value) === position).join(", ");
     return {
@@ -39,4 +42,21 @@ export async function searchChileanAddresses(query: string): Promise<AddressSugg
       latitude: feature.geometry?.coordinates?.[1]
     };
   }).filter((item) => item.label);
+
+  const unique = new Map<string, AddressSuggestion>();
+  suggestions.forEach((suggestion) => {
+    const key = [suggestion.address, suggestion.comuna, suggestion.city]
+      .map((value) => value.trim().toLocaleLowerCase("es"))
+      .join("|");
+    if (!unique.has(key)) unique.set(key, suggestion);
+  });
+  return [...unique.values()];
+}
+
+function getChileanCity({ comuna, county, rawCity, state }: { comuna: string; county: string; rawCity: string; state: string }) {
+  const differsFromComuna = (value: string) => value && value.toLocaleLowerCase("es") !== comuna.toLocaleLowerCase("es");
+  if (differsFromComuna(rawCity)) return rawCity;
+  if (differsFromComuna(county) && !/provincia|regi[oó]n/i.test(county)) return county;
+  if (/metropolitana|santiago/i.test(state)) return "Santiago";
+  return differsFromComuna(county) ? county.replace(/^Provincia de\s+/i, "") : rawCity || comuna;
 }

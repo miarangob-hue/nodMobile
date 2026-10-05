@@ -11,13 +11,14 @@ import {
   TextInput,
   View
 } from "react-native";
-import { registerCustomer } from "../api/auth";
-import { listCustomers } from "../api/customer";
-import type { Customer } from "../types/api";
+import { loginWithPassword, registerCustomer } from "../api/auth";
 import { BrandLogo } from "../components/BrandLogo";
+import { AuthDivider, GoogleAuthButton } from "../components/GoogleAuthButton";
 import { formatChileanRut, isValidChileanRut } from "../utils/rut";
 import { getFriendlyError } from "../utils/errors";
 import { searchChileanAddresses, type AddressSuggestion } from "../api/location";
+import { authenticateWithGoogle, isGoogleSignInCancellation } from "../services/googleAuth";
+import { saveSession, type Session } from "../storage/session";
 
 const countryCodes = [
   { code: "+56", label: "🇨🇱 Chile" },
@@ -28,10 +29,10 @@ const countryCodes = [
 
 type Props = {
   onBack: () => void;
-  onCustomerSelected: (customer: Customer) => void;
+  onGoogleAuthenticated: (session: Session) => void;
 };
 
-export function RegisterCustomerScreen({ onBack, onCustomerSelected }: Props) {
+export function RegisterCustomerScreen({ onBack, onGoogleAuthenticated }: Props) {
   const scrollRef = useRef<ScrollView>(null);
   const lastNameRef = useRef<TextInput>(null);
   const emailRef = useRef<TextInput>(null);
@@ -50,11 +51,9 @@ export function RegisterCustomerScreen({ onBack, onCustomerSelected }: Props) {
   const [city, setCity] = useState("");
   const [comuna, setComuna] = useState("");
   const [addressSuggestions, setAddressSuggestions] = useState<AddressSuggestion[]>([]);
-  const [search, setSearch] = useState("");
-  const [customers, setCustomers] = useState<Customer[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isRegistering, setIsRegistering] = useState(false);
-  const [isSearching, setIsSearching] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [step, setStep] = useState<1 | 2 | 3>(1);
 
   useEffect(() => {
@@ -138,7 +137,9 @@ export function RegisterCustomerScreen({ onBack, onCustomerSelected }: Props) {
         city: city.trim() || undefined,
         comuna: comuna.trim() || undefined
       });
-      onCustomerSelected(response.customer);
+      const session = await loginWithPassword(response.email, password, "customer");
+      await saveSession(session);
+      onGoogleAuthenticated(session);
     } catch (currentError) {
       setError(getFriendlyError(currentError, "No se pudo crear la cuenta cliente."));
     } finally {
@@ -146,22 +147,25 @@ export function RegisterCustomerScreen({ onBack, onCustomerSelected }: Props) {
     }
   }
 
-  async function handleSearchCustomers() {
+  async function handleGoogleRegister() {
     setError(null);
-    setIsSearching(true);
-
+    setIsGoogleLoading(true);
     try {
-      const response = await listCustomers({ search: search.trim() || undefined });
-      setCustomers(response.customers);
+      const session = await authenticateWithGoogle("customer");
+      if (!session) return;
+      await saveSession(session);
+      onGoogleAuthenticated(session);
     } catch (currentError) {
-      setError(currentError instanceof Error ? currentError.message : "No se pudieron cargar clientes.");
+      if (!isGoogleSignInCancellation(currentError)) {
+        setError(getFriendlyError(currentError, "No se pudo registrar con Google."));
+      }
     } finally {
-      setIsSearching(false);
+      setIsGoogleLoading(false);
     }
   }
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={styles.container}>
+    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.container}>
       <ScrollView
         contentContainerStyle={styles.content}
         keyboardDismissMode="none"
@@ -180,6 +184,13 @@ export function RegisterCustomerScreen({ onBack, onCustomerSelected }: Props) {
         </View>
 
         <View style={styles.form}>
+          <GoogleAuthButton
+            disabled={isRegistering}
+            label="Registrarse con Google"
+            loading={isGoogleLoading}
+            onPress={() => void handleGoogleRegister()}
+          />
+          <AuthDivider />
           {step === 1 ? <>
           <Text style={styles.sectionTitle}>Datos de acceso</Text>
           <View style={styles.nameRow}>
@@ -342,55 +353,10 @@ export function RegisterCustomerScreen({ onBack, onCustomerSelected }: Props) {
           <Pressable onPress={() => setStep(2)} style={styles.backStepButton}><Text style={styles.backStepText}>Atrás</Text></Pressable>
           </> : null}
 
-          {__DEV__ ? <>
-          <View style={styles.divider} />
-
-          <Text style={styles.sectionTitle}>Usar cliente existente</Text>
-          <TextInput
-            autoCorrect={false}
-            keyboardType={Platform.OS === "android" ? "visible-password" : "default"}
-            onChangeText={setSearch}
-            placeholder="Buscar por nombre o email"
-            showSoftInputOnFocus
-            style={styles.input}
-            value={search}
-          />
-          <Pressable
-            disabled={isSearching}
-            onPress={handleSearchCustomers}
-            style={[styles.secondaryAction, isSearching && styles.buttonDisabled]}
-          >
-            {isSearching ? <ActivityIndicator color="#EE7C2B" /> : <Text style={styles.secondaryActionText}>Buscar clientes</Text>}
-          </Pressable>
-
-          {customers.map((customer) => (
-            <Pressable key={customer.id} onPress={() => onCustomerSelected(customer)} style={styles.customerRow}>
-              <View style={styles.customerAvatar}>
-                <Text style={styles.customerAvatarText}>{getInitials(customer)}</Text>
-              </View>
-              <View style={styles.customerCopy}>
-                <Text style={styles.customerName}>{getCustomerName(customer)}</Text>
-                <Text style={styles.customerMeta}>{customer.email ?? customer.phone ?? customer.id}</Text>
-              </View>
-            </Pressable>
-          ))}
-          </> : null}
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
-}
-
-function getCustomerName(customer: Customer) {
-  return customer.full_name ?? (`${customer.first_name ?? ""} ${customer.last_name ?? ""}`.trim() || "Cliente NOD");
-}
-
-function getInitials(customer: Customer) {
-  return getCustomerName(customer)
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? "")
-    .join("");
 }
 
 function normalizeInternationalPhone(countryCode: string, phone: string) {
@@ -556,15 +522,15 @@ const styles = StyleSheet.create({
   },
   secondaryAction: {
     alignItems: "center",
-    backgroundColor: "#EAF3DE",
-    borderColor: "#F5C4B3",
+    backgroundColor: "#EE7C2B",
+    borderColor: "#EE7C2B",
     borderRadius: 8,
     borderWidth: 1,
     justifyContent: "center",
     minHeight: 48
   },
   secondaryActionText: {
-    color: "#EE7C2B",
+    color: "#ffffff",
     fontSize: 15,
     fontWeight: "900"
   },

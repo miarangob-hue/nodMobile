@@ -13,4 +13,9 @@ yarn-error.log*
 *.key
 *.jks
 *.keystore
+*.apk
+*.aab
+google-services.json
+GoogleService-Info.plist
+secrets/
 {{pkgetc}}/

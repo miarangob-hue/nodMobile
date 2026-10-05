@@ -7,6 +7,7 @@ type RequestOptions = {
   body?: unknown;
   accessToken?: string | null;
   apiKeyKind?: "provider" | "customer";
+  omitApiKey?: boolean;
   warnOnError?: boolean;
 };
 
@@ -51,10 +52,9 @@ function getApiKey(apiKeyKind: RequestOptions["apiKeyKind"]) {
   return env.providerApiKey;
 }
 
-function buildHeaders(accessToken?: string | null, contentType?: string, apiKeyKind?: RequestOptions["apiKeyKind"]) {
-  const headers: Record<string, string> = {
-    "x-api-key": getApiKey(apiKeyKind)
-  };
+function buildHeaders(accessToken?: string | null, contentType?: string, apiKeyKind?: RequestOptions["apiKeyKind"], omitApiKey = false) {
+  const headers: Record<string, string> = {};
+  if (!omitApiKey) headers["x-api-key"] = getApiKey(apiKeyKind);
 
   if (contentType) {
     headers["Content-Type"] = contentType;
@@ -79,12 +79,8 @@ async function parseResponse(path: string, method: string, response: Response, w
 
   if (!response.ok) {
     if (warnOnError) {
-      console.warn("[NOD API]", {
-        path,
-        method,
-        status: response.status,
-        body
-      });
+      const details = typeof body === "string" ? body : JSON.stringify(body);
+      console.warn(`[NOD API] ${method} ${path} -> ${response.status}${details ? `: ${details}` : ""}`);
     }
     throw new ApiError(response.status, body);
   }
@@ -97,7 +93,7 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
   const method = options.method ?? "GET";
   const response = await fetch(url, {
     method,
-    headers: buildHeaders(options.accessToken, "application/json", options.apiKeyKind),
+    headers: buildHeaders(options.accessToken, "application/json", options.apiKeyKind, options.omitApiKey),
     body: options.body ? JSON.stringify(options.body) : undefined
   });
 

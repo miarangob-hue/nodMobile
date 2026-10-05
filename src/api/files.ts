@@ -19,7 +19,6 @@ export async function uploadFile({ providerId, documentType, fileUri, accessToke
     method: "POST",
     accessToken,
     body: {
-      provider_id: providerId,
       document_type: documentType,
       file_name: `${documentType}.${mimeType === "image/png" ? "png" : "jpg"}`,
       mime_type: mimeType,

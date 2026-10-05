@@ -296,7 +296,7 @@ export function OnboardingScreen({ provider, session, onLogout, onSubmittedForRe
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
       style={styles.screen}
     >
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">

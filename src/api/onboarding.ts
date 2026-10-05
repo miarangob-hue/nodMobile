@@ -15,14 +15,12 @@ export function getOnboardingSteps(serviceCategory?: string, accessToken?: strin
 
 export function getProviderOnboarding(providerId: string, accessToken?: string | null) {
   return apiRequest<ProviderOnboardingResponse>("/get-provider-onboarding", {
-    query: { provider_id: providerId },
     accessToken
   });
 }
 
 export function getProviderRejections(providerId: string, accessToken?: string | null) {
   return apiRequest<ProviderRejectionsResponse>("/get-provider-rejections", {
-    query: { provider_id: providerId },
     accessToken
   });
 }
@@ -31,11 +29,12 @@ export function submitProviderOnboarding(
   payload: SubmitOnboardingPayload,
   accessToken?: string | null
 ) {
+  const { provider_id: _providerId, ...sessionScopedPayload } = payload;
   return apiRequest<{ provider_id: string; step: unknown | null; status: string }>(
     "/submit-provider-onboarding",
     {
       method: "POST",
-      body: payload,
+      body: sessionScopedPayload,
       accessToken
     }
   );

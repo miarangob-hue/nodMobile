@@ -92,8 +92,8 @@ android {
         applicationId 'com.nod.mobile'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 18
-        versionName "1.0.17"
+        versionCode 28
+        versionName "1.0.26"
 
         buildConfigField "String", "REACT_NATIVE_RELEASE_LEVEL", "\"${findProperty('reactNativeReleaseLevel') ?: 'stable'}\""
     }
@@ -178,17 +178,5 @@ dependencies {
         implementation("com.facebook.react:hermes-android")
     } else {
         implementation jscFlavor
-    }
-}
-
-tasks.register("copyReleaseApkToDist", Copy) {
-    from(layout.buildDirectory.file("outputs/apk/release/app-release.apk"))
-    into(new File(rootProject.projectDir.parentFile, "dist"))
-    rename { "NOD-${android.defaultConfig.versionName}.apk" }
-}
-
-afterEvaluate {
-    tasks.named("assembleRelease").configure {
-        finalizedBy("copyReleaseApkToDist")
     }
 }

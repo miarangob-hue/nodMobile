@@ -1,0 +1,29 @@
+name: Quality
+
+on:
+  pull_request:
+  push:
+    branches: [dev, main]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run validate
+      - name: Validate Expo Android bundle
+        env:
+          EXPO_PUBLIC_API_BASE_URL: https://example.invalid/functions/v1
+          EXPO_PUBLIC_NOD_PROVIDER_API_KEY: ci-placeholder
+          EXPO_PUBLIC_NOD_CUSTOMER_API_BASE_URL: https://example.invalid/functions/v1/nod-api
+          EXPO_PUBLIC_NOD_CUSTOMER_API_KEY: ci-placeholder
+        run: npx expo export --platform android --output-dir /tmp/nod-android-export

@@ -2,7 +2,7 @@
   "expo": {
     "name": "NOD",
     "slug": "nod-mobile",
-    "version": "1.0.17",
+    "version": "1.0.26",
     "orientation": "portrait",
     "scheme": "nod",
     "platforms": [
@@ -25,7 +25,7 @@
     },
     "android": {
       "package": "com.nod.mobile",
-      "versionCode": 18,
+      "versionCode": 28,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-foreground.png",
         "backgroundColor": "#FCFAF7"
@@ -54,7 +54,13 @@
         }
       ],
       "expo-secure-store",
-      "expo-notifications",
+      [
+        "expo-notifications",
+        {
+          "color": "#EE7C2B",
+          "defaultChannel": "nod-alerts"
+        }
+      ],
       "expo-font",
       [
         "expo-splash-screen",

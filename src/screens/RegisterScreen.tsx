@@ -16,8 +16,10 @@ import { assertRuntimeConfig } from "../config/env";
 import { saveSession, type Session } from "../storage/session";
 import type { RegisterProviderPayload } from "../types/api";
 import { BrandLogo } from "../components/BrandLogo";
+import { AuthDivider, GoogleAuthButton } from "../components/GoogleAuthButton";
 import { formatChileanRut, isValidChileanRut } from "../utils/rut";
 import { getFriendlyError } from "../utils/errors";
+import { authenticateWithGoogle, isGoogleSignInCancellation } from "../services/googleAuth";
 
 type Props = {
   onBack: () => void;
@@ -36,6 +38,7 @@ export function RegisterScreen({ onBack, onRegistered }: Props) {
     useState<NonNullable<RegisterProviderPayload["legal_entity_type"]>>("natural");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [step, setStep] = useState<1 | 2>(1);
 
   const canSubmit =
@@ -89,9 +92,26 @@ export function RegisterScreen({ onBack, onRegistered }: Props) {
     }
   }
 
+  async function handleGoogleRegister() {
+    setError(null);
+    setIsGoogleLoading(true);
+    try {
+      const session = await authenticateWithGoogle("provider");
+      if (!session) return;
+      await saveSession(session);
+      onRegistered(session);
+    } catch (currentError) {
+      if (!isGoogleSignInCancellation(currentError)) {
+        setError(getFriendlyError(currentError, "No se pudo registrar con Google."));
+      }
+    } finally {
+      setIsGoogleLoading(false);
+    }
+  }
+
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
       style={styles.container}
     >
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
@@ -107,6 +127,13 @@ export function RegisterScreen({ onBack, onRegistered }: Props) {
         </View>
 
         <View style={styles.form}>
+          <GoogleAuthButton
+            disabled={isLoading}
+            label="Registrarse con Google"
+            loading={isGoogleLoading}
+            onPress={() => void handleGoogleRegister()}
+          />
+          <AuthDivider />
           {step === 1 ? <>
           <Text style={styles.sectionTitle}>Identificación</Text>
           <Text style={styles.stepHelp}>Validaremos el RUT chileno con módulo 11.</Text>

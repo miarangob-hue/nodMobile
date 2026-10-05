@@ -6,6 +6,7 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  KeyboardAvoidingView,
   Platform,
   Pressable,
   RefreshControl,
@@ -17,8 +18,9 @@ import {
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { BrandLogo } from "../components/BrandLogo";
-import { registerPushNotifications } from "../services/pushNotifications";
+import { registerPushNotifications, type PushNotificationData } from "../services/pushNotifications";
 import { getChileanComunas } from "../api/onboarding";
+import { searchChileanAddresses, type AddressSuggestion } from "../api/location";
 import {
   acceptBooking,
   cancelBooking,
@@ -93,11 +95,15 @@ import type {
   VeterinaryCoverage,
   WalletTransaction
 } from "../types/api";
+import { canProviderAcceptStatus } from "../utils/bookingStatus";
+import { normalizeBookingStatus } from "../utils/normalization";
 
 type Props = {
   provider: Provider;
   accessToken?: string | null;
   onLogout: () => void;
+  pushIntent?: { id: number; data: PushNotificationData } | null;
+  onPushIntentHandled?: () => void;
 };
 
 type BookingAction = "accept" | "reject" | "start" | "complete" | "cancel" | "photo" | "pause" | "resume" | "incident";
@@ -193,7 +199,7 @@ const supportCategories: SupportCategory[] = [
   }
 ];
 
-export function ProviderDashboardScreen({ provider, accessToken, onLogout }: Props) {
+export function ProviderDashboardScreen({ provider, accessToken, onLogout, pushIntent, onPushIntentHandled }: Props) {
   useEffect(() => {
     void registerPushNotifications({ userId: provider.id, role: "provider", accessToken }).catch(() => null);
   }, [accessToken, provider.id]);
@@ -210,6 +216,12 @@ export function ProviderDashboardScreen({ provider, accessToken, onLogout }: Pro
   const [actionState, setActionState] = useState<{ bookingId: string; action: BookingAction } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!pushIntent) return;
+    setActiveView(getProviderViewFromPush(pushIntent.data));
+    onPushIntentHandled?.();
+  }, [onPushIntentHandled, pushIntent]);
 
   const providerName =
     provider.full_name ?? `${provider.first_name ?? ""} ${provider.last_name ?? ""}`.trim() ?? "Proveedor";
@@ -300,6 +312,7 @@ export function ProviderDashboardScreen({ provider, accessToken, onLogout }: Pro
         replaceBookingLocally(mergeBooking(booking, updatedBooking, { status: "accepted" }));
         setAcceptedBookingIds((current) => [...new Set([...current, bookingId])]);
         setNotice("Solicitud aceptada.");
+        shouldReload = true;
       }
 
       if (action === "reject") {
@@ -675,7 +688,7 @@ export function ProviderDashboardScreen({ provider, accessToken, onLogout }: Pro
   }
 
   return (
-    <View style={styles.screen}>
+    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.screen}>
       <ScrollView
         contentContainerStyle={styles.container}
         keyboardDismissMode="none"
@@ -705,7 +718,7 @@ export function ProviderDashboardScreen({ provider, accessToken, onLogout }: Pro
             </View>
           </View>
 
-          <Text style={styles.serviceTitle}>Paseador de perros</Text>
+          <Text style={styles.serviceTitle}>Paseador de mascotas</Text>
           <Text style={styles.serviceSubtitle}>
             Gestiona solicitudes, agenda e inicio de servicios desde tu panel.
           </Text>
@@ -769,7 +782,7 @@ export function ProviderDashboardScreen({ provider, accessToken, onLogout }: Pro
                       </Text>
                     </View>
                     <Text style={styles.activeWalkSummaryTitle}>
-                      {currentWalkBooking.product_name ?? currentWalkBooking.service_name ?? "Paseo de perros"}
+                      {currentWalkBooking.product_name ?? currentWalkBooking.service_name ?? "Paseo de mascotas"}
                     </Text>
                     <Text style={styles.activeWalkSummaryMeta}>{formatBookingTime(currentWalkBooking)}</Text>
                   </View>
@@ -898,8 +911,22 @@ export function ProviderDashboardScreen({ provider, accessToken, onLogout }: Pro
           </>
         )}
       </ScrollView>
-    </View>
+    </KeyboardAvoidingView>
   );
+}
+
+function getProviderViewFromPush(data: PushNotificationData): DashboardView {
+  const target = [data.screen, data.route, data.type, data.event, data.kind]
+    .filter((value): value is string => typeof value === "string")
+    .join(" ")
+    .toLowerCase();
+
+  if (/new.booking|booking.request|request/.test(target)) return "requests";
+  if (/booking|reservation|walk|service|tracking/.test(target)) return "schedule";
+  if (/wallet|payment|payout/.test(target)) return "wallet";
+  if (/review|rating/.test(target)) return "reviews";
+  if (/profile|document|verification/.test(target)) return "profile";
+  return "notifications";
 }
 
 function ActiveWalkView({
@@ -936,7 +963,7 @@ function ActiveWalkView({
   const isPausing = actionState?.bookingId === bookingId && actionState.action === "pause";
   const isResuming = actionState?.bookingId === bookingId && actionState.action === "resume";
   const isPaused = isPausedBooking(booking);
-  const title = booking.product_name ?? booking.service_name ?? "Paseo de perros";
+  const title = booking.product_name ?? booking.service_name ?? "Paseo de mascotas";
   const customer = booking.customer_name ?? booking.customer_email ?? "Cliente NOD";
   const startCoordinate = getStartCoordinate(booking);
   const completionCoordinate = getCompletionCoordinate(booking);
@@ -1018,7 +1045,7 @@ function ActiveWalkView({
   }, [accessToken, booking, bookingId, isPaused]);
 
   return (
-    <View style={styles.screen}>
+    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.screen}>
       <ScrollView contentContainerStyle={styles.container} keyboardDismissMode="none" keyboardShouldPersistTaps="handled">
         <DrillDownHeader onBack={onBack} title="Paseo activo" />
         <FeedbackMessages error={error} notice={notice} />
@@ -1174,7 +1201,7 @@ function ActiveWalkView({
           />
         </View>
       </ScrollView>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -1267,7 +1294,7 @@ function BookingCard({
 }) {
   const bookingId = getBookingId(booking);
   const isBusy = actionState?.bookingId === bookingId;
-  const title = booking.product_name ?? booking.service_name ?? "Paseo de perros";
+  const title = booking.product_name ?? booking.service_name ?? "Paseo de mascotas";
   const customer = booking.customer_name ?? booking.customer_email ?? "Cliente NOD";
 
   return (
@@ -1392,7 +1419,7 @@ function DashboardDrillDown({
   ];
 
   return (
-    <View style={styles.screen}>
+    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.screen}>
       <ScrollView contentContainerStyle={styles.container} keyboardDismissMode="none" keyboardShouldPersistTaps="handled">
         <DrillDownHeader onBack={onBack} title={title} />
         <FeedbackMessages error={error} notice={notice} />
@@ -1417,7 +1444,7 @@ function DashboardDrillDown({
           ))
         )}
       </ScrollView>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -1673,18 +1700,60 @@ function ProviderProfilePanel({
   const displayName = profile?.full_name ?? provider.full_name ?? "Proveedor NOD";
   const [bio, setBio] = useState(profile?.bio ?? "");
   const [phone, setPhone] = useState(profile?.phone ?? "");
+  const [address, setAddress] = useState(profile?.address ?? provider.address ?? "");
+  const [comuna, setComuna] = useState(profile?.comuna ?? provider.comunas?.[0] ?? "");
+  const [city, setCity] = useState(profile?.city ?? provider.city ?? "");
+  const [comunaCatalog, setComunaCatalog] = useState<Array<{ comuna: string; region: string }>>([]);
+  const [showComunaCatalog, setShowComunaCatalog] = useState(false);
+  const [addressSuggestions, setAddressSuggestions] = useState<AddressSuggestion[]>([]);
+  const [skipAddressSearch, setSkipAddressSearch] = useState(true);
   const [experienceYears, setExperienceYears] = useState(String(profile?.experience_years ?? ""));
   const [languages, setLanguages] = useState((profile?.languages ?? ["Espanol"]).join(", "));
   const [cancellationPolicy, setCancellationPolicy] = useState(profile?.cancellation_policy ?? "");
   const [isSaving, setIsSaving] = useState(false);
+  const [isRequestingDeletion, setIsRequestingDeletion] = useState(false);
 
   useEffect(() => {
     setBio(profile?.bio ?? "");
     setPhone(profile?.phone ?? "");
+    setAddress(profile?.address ?? provider.address ?? "");
+    setComuna(profile?.comuna ?? provider.comunas?.[0] ?? "");
+    setCity(profile?.city ?? provider.city ?? "");
     setExperienceYears(String(profile?.experience_years ?? ""));
     setLanguages((profile?.languages ?? ["Espanol"]).join(", "));
     setCancellationPolicy(profile?.cancellation_policy ?? "");
-  }, [profile]);
+  }, [profile, provider.address, provider.city, provider.comunas]);
+
+  useEffect(() => {
+    void getChileanComunas(accessToken).then(setComunaCatalog).catch(() => setComunaCatalog([]));
+  }, [accessToken]);
+
+  useEffect(() => {
+    if (skipAddressSearch) {
+      setSkipAddressSearch(false);
+      return;
+    }
+    const timer = setTimeout(() => {
+      if (address.trim().length < 3) return setAddressSuggestions([]);
+      void searchChileanAddresses(address).then(setAddressSuggestions).catch(() => setAddressSuggestions([]));
+    }, 450);
+    return () => clearTimeout(timer);
+  }, [address]);
+
+  function chooseProfileComuna(item: { comuna: string; region: string }) {
+    setComuna(item.comuna);
+    setCity(item.region);
+    setShowComunaCatalog(false);
+  }
+
+  function chooseProfileAddress(suggestion: AddressSuggestion) {
+    const catalogEntry = comunaCatalog.find((item) => normalizeStatus(item.comuna) === normalizeStatus(suggestion.comuna));
+    setSkipAddressSearch(true);
+    setAddress(suggestion.address);
+    setComuna(catalogEntry?.comuna ?? suggestion.comuna);
+    setCity(catalogEntry?.region ?? suggestion.city);
+    setAddressSuggestions([]);
+  }
 
   async function saveProfile() {
     setIsSaving(true);
@@ -1695,6 +1764,9 @@ function ProviderProfilePanel({
         providerId: provider.id,
         bio: bio.trim(),
         phone: phone.trim(),
+        address: address.trim(),
+        comuna: comuna.trim(),
+        city: city.trim(),
         experienceYears: Number.isNaN(parsedExperience) ? null : parsedExperience,
         languages: languages.split(",").map((item) => item.trim()).filter(Boolean),
         cancellationPolicy: cancellationPolicy.trim(),
@@ -1705,6 +1777,9 @@ function ProviderProfilePanel({
         ...(profile ?? { id: provider.id }),
         bio: bio.trim(),
         phone: phone.trim(),
+        address: address.trim(),
+        comuna: comuna.trim(),
+        city: city.trim(),
         experience_years: Number.isNaN(parsedExperience) ? null : parsedExperience,
         languages: languages.split(",").map((item) => item.trim()).filter(Boolean),
         cancellation_policy: cancellationPolicy.trim()
@@ -1715,6 +1790,35 @@ function ProviderProfilePanel({
     } finally {
       setIsSaving(false);
     }
+  }
+
+  function requestAccountDeletion() {
+    Alert.alert(
+      "Solicitar eliminación de cuenta",
+      "La solicitud desactivará tu perfil después de verificar servicios, pagos y obligaciones pendientes.",
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Enviar solicitud",
+          style: "destructive",
+          onPress: () => {
+            setIsRequestingDeletion(true);
+            void createSupportTicket({
+              userId: provider.id,
+              category: "account_deletion",
+              subject: "Solicitud de eliminación de cuenta proveedor",
+              message: "Solicito eliminar mi cuenta NOD y los datos personales asociados. Confirmar servicios, pagos pendientes y fecha efectiva por email.",
+              priority: "high",
+              accessToken
+            }).then(() => {
+              Alert.alert("Solicitud enviada", "Soporte verificará tu identidad y las operaciones pendientes antes de eliminar la cuenta.");
+            }).catch((error) => {
+              Alert.alert("No se pudo enviar", getDashboardError(error));
+            }).finally(() => setIsRequestingDeletion(false));
+          }
+        }
+      ]
+    );
   }
 
   return (
@@ -1759,6 +1863,27 @@ function ProviderProfilePanel({
           style={styles.formInput}
           value={phone}
         />
+        <TextInput
+          autoCorrect={false}
+          onChangeText={setAddress}
+          placeholder="Buscar dirección"
+          placeholderTextColor="#888780"
+          showSoftInputOnFocus
+          style={styles.formInput}
+          value={address}
+        />
+        {addressSuggestions.length ? <View style={styles.zoneCatalogList}>{addressSuggestions.map((suggestion) => <Pressable key={suggestion.id} onPress={() => chooseProfileAddress(suggestion)} style={styles.zoneCatalogRow}><Feather color="#EE7C2B" name="map-pin" size={17} /><View style={[styles.zoneCopy, { marginLeft: 10 }]}><Text style={styles.zoneTitle}>{suggestion.address}</Text><Text style={styles.zoneMeta}>{suggestion.label}</Text></View></Pressable>)}</View> : null}
+        <TextInput
+          onChangeText={(value) => { setComuna(value); setShowComunaCatalog(true); }}
+          onFocus={() => setShowComunaCatalog(true)}
+          placeholder="Buscar comuna"
+          placeholderTextColor="#888780"
+          showSoftInputOnFocus
+          style={styles.formInput}
+          value={comuna}
+        />
+        {showComunaCatalog ? <ScrollView nestedScrollEnabled style={styles.zoneCatalogList}>{comunaCatalog.filter((item) => !comuna.trim() || normalizeStatus(`${item.comuna} ${item.region}`).includes(normalizeStatus(comuna))).slice(0, 40).map((item) => <Pressable key={`${item.region}-${item.comuna}`} onPress={() => chooseProfileComuna(item)} style={styles.zoneCatalogRow}><View style={styles.zoneCopy}><Text style={styles.zoneTitle}>{item.comuna}</Text><Text style={styles.zoneMeta}>{item.region}</Text></View><Feather color="#EE7C2B" name="chevron-right" size={17} /></Pressable>)}</ScrollView> : null}
+        <TextInput editable={false} placeholder="Ciudad / región" placeholderTextColor="#888780" style={[styles.formInput, { opacity: 0.75 }]} value={city} />
         <TextInput
           keyboardType={Platform.OS === "android" ? "visible-password" : "number-pad"}
           onChangeText={setExperienceYears}
@@ -1831,6 +1956,11 @@ function ProviderProfilePanel({
             />
           ))
         )}
+      </View>
+      <View style={styles.detailPanel}>
+        <Text style={styles.panelTitle}>Privacidad y cuenta</Text>
+        <Text style={styles.panelText}>Puedes solicitar la eliminación de tu perfil. NOD verificará antes que no existan servicios, disputas o pagos pendientes.</Text>
+        <ActionButton busy={isRequestingDeletion} icon="trash-2" label="Solicitar eliminación de cuenta" onPress={requestAccountDeletion} variant="secondary" />
       </View>
     </>
   );
@@ -2579,14 +2709,14 @@ function BookingChatPanel({
     }
 
     setChat(nextChat);
-    const response = await getChatMessages({ chatId: nextChat.id, accessToken }).catch(() => ({
+    const response = await getChatMessages({ chatId: bookingId, accessToken }).catch(() => ({
       messages: [],
       next_cursor: null
     }));
     setMessages(response.messages);
     const latestMessage = response.messages[response.messages.length - 1];
     await markChatRead({
-      chatId: nextChat.id,
+      chatId: bookingId,
       userId: providerId,
       messageId: latestMessage?.id,
       accessToken
@@ -2608,7 +2738,7 @@ function BookingChatPanel({
 
     try {
       const message = await sendChatMessage({
-        chatId: chat.id,
+        chatId: bookingId,
         senderId: providerId,
         text,
         accessToken
@@ -2695,13 +2825,13 @@ function BookingDetailView({
   onAction: (booking: Booking, action: BookingAction) => Promise<void>;
   providerId: string;
 }) {
-  const title = booking.product_name ?? booking.service_name ?? "Paseo de perros";
+  const title = booking.product_name ?? booking.service_name ?? "Paseo de mascotas";
   const customer = booking.customer_name ?? booking.customer_email ?? "Cliente NOD";
   const bookingId = getBookingId(booking);
   const isBusy = actionState?.bookingId === bookingId;
 
   return (
-    <View style={styles.screen}>
+    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.screen}>
       <ScrollView contentContainerStyle={styles.container} keyboardDismissMode="none" keyboardShouldPersistTaps="handled">
         <DrillDownHeader onBack={onBack} title="Detalle de reserva" />
         <FeedbackMessages error={error} notice={notice} />
@@ -2792,7 +2922,7 @@ function BookingDetailView({
           ) : null}
         </View>
       </ScrollView>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -3018,28 +3148,22 @@ function getEmptyText(view: DashboardView) {
 }
 
 function isPendingBooking(booking: Booking) {
+  const providerStatus = normalizeStatus(
+    booking.provider_status ?? booking.provider_response_status ?? booking.acceptance_status ?? ""
+  );
+
+  if (
+    booking.accepted_by_provider === true ||
+    Boolean(booking.provider_accepted_at) ||
+    Boolean(booking.accepted_at) ||
+    providerStatus === "accepted"
+  ) {
+    return false;
+  }
+
   const status = normalizeStatus(booking.status);
 
-  return (
-    [
-      "pending",
-      "requested",
-      "request",
-      "created",
-      "new",
-      "pending_acceptance",
-      "pending_confirmation",
-      "pending_provider",
-      "provider_pending",
-      "awaiting_acceptance",
-      "awaiting_provider",
-      "booking_requested",
-      "scheduled"
-    ].includes(status) ||
-    (status.includes("pending") && !status.includes("payment")) ||
-    status.includes("requested") ||
-    status.includes("awaiting")
-  );
+  return canProviderAcceptStatus(status);
 }
 
 function isActiveBooking(booking: Booking, acceptedBookingIds: string[] = []) {
@@ -3428,10 +3552,7 @@ function getStatusLabel(status: string) {
 }
 
 function normalizeStatus(status: string) {
-  return String(status ?? "")
-    .trim()
-    .toLowerCase()
-    .replace(/[\s-]+/g, "_");
+  return normalizeBookingStatus(status);
 }
 
 function toDateParam(date: Date) {
