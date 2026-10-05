@@ -28,7 +28,7 @@
 - [x] Integrar feed comunitario global, publicaciones con foto, reacciones y comentarios mediante `/feed` y `/posts`.
 - [ ] Persistir logros/medallas en backend y agregar ranking comunitario; hoy el progreso se deriva de los spots sincronizados.
 - [x] Verificar acceso autenticado a búsqueda residencial con la llave móvil y Bearer Customer.
-- [ ] Vincular la identidad del proveedor con `nod-api` y publicar/sincronizar el `hosting_profile` de `pabloxxp@gmail.com`; el login Provider actual no es válido en el proyecto Customer.
+- [ ] Vincular la identidad del proveedor con `nod-api` y sincronizar el `hosting_profile` ya activo de `pabloxp@gmail.com`; Customer API responde `404 Host not found` para su ID Provider.
 - [ ] Corregir el chat de reservas: Provider API rechaza el JWT Customer aunque las rutas ya existen.
 - [x] Incorporar borradores de privacidad, términos y solicitud autenticada de eliminación de cuenta.
 - [ ] Revisión jurídica, identidad legal completa y publicación web de privacidad, términos y eliminación.
