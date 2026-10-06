@@ -1712,8 +1712,8 @@ function ResidentialView({ accessToken, customer, onCreated, onSupport, pets }: 
   const [bookings, setBookings] = useState<HostingBooking[]>([]);
 
   const loadBookings = useCallback(async () => {
-    try { setBookings(await getMyHostingBookings(accessToken)); } catch { /* La búsqueda sigue disponible aunque no haya historial. */ }
-  }, [accessToken]);
+    try { setBookings(await getMyHostingBookings(customer.id, accessToken)); } catch { /* La búsqueda sigue disponible aunque no haya historial. */ }
+  }, [accessToken, customer.id]);
 
   const runSearch = useCallback(async () => {
     if (new Date(checkOut) <= new Date(checkIn)) { setError("La salida debe ser posterior al ingreso."); return; }
@@ -1738,7 +1738,9 @@ function ResidentialView({ accessToken, customer, onCreated, onSupport, pets }: 
     if (!host || !pet) { Alert.alert("Faltan datos", "Selecciona un anfitrión y una mascota."); return; }
     setSaving(true); setReservationError(false);
     try {
-      const created = await createHostingBooking({ hostingProfileId: host.id, customerId: customer.id, checkIn, checkOut, petIds: [pet.id], specialInstructions: `Mascota: ${pet.name}`, accessToken });
+      const nights = Math.max(1, Math.round((new Date(checkOut).getTime() - new Date(checkIn).getTime()) / 86400000));
+      const price = host.estimated_total ?? (host.nightly_rate ?? 0) * nights;
+      const created = await createHostingBooking({ hostingProfileId: host.id, providerId: host.provider_id, customerId: customer.id, checkIn, checkOut, petIds: [pet.id], price, currency: host.currency ?? "CLP", specialInstructions: `Mascota: ${pet.name}`, accessToken });
       if (created?.id) { await onCreated({ id: String(created.id), provider_id: host.provider_id, customer_id: customer.id, pet_id: pet.id, pet_name: pet.name, provider_name: host.host_name ?? host.title, service_name: "Hospedaje residencial", starts_at: new Date(`${checkIn}T15:00:00`).toISOString(), ends_at: new Date(`${checkOut}T12:00:00`).toISOString(), status: String(created.status ?? "PENDING"), price: Number(created.total_amount ?? 0), currency: String(created.currency ?? "CLP"), address: host.address, comuna: host.comuna }); await loadBookings(); }
     } catch { setReservationError(true); }
     finally { setSaving(false); }
@@ -1749,9 +1751,10 @@ function ResidentialView({ accessToken, customer, onCreated, onSupport, pets }: 
     return <>
       <Pressable onPress={() => setSelected(null)} style={styles.secondaryButton}><Feather color="#ffffff" name="arrow-left" size={18} /><Text style={styles.secondaryButtonText}>Volver a resultados</Text></Pressable>
       <View style={styles.panel}><Text style={styles.panelTitle}>{host.title ?? host.host_name}</Text><Text style={styles.panelText}>{host.bio}</Text>
-        <InfoRow label="Ubicación" value={[host.address, host.comuna].filter(Boolean).join(", ")} /><InfoRow label="Propiedad" value={host.property_type ?? "No indicada"} /><InfoRow label="Capacidad" value={`${host.max_pets_capacity ?? 1} mascota(s)`} /><InfoRow label="Tarifa" value={`${formatMoney(host.nightly_rate ?? 0)} por noche`} /><InfoRow label="Patio" value={host.has_yard ? "Sí" : "No"} />
+        <InfoRow label="Ubicación" value={[host.address, host.comuna].filter(Boolean).join(", ")} /><InfoRow label="Propiedad" value={host.property_type ?? "No indicada"} /><InfoRow label="Capacidad" value={`${host.max_pets_capacity ?? 1} mascota(s)`} /><InfoRow label="Tarifa" value={`${formatMoney(host.nightly_rate ?? 0)} por noche`} /><InfoRow label="Mascota adicional" value={formatMoney(host.extra_pet_rate ?? 0)} /><InfoRow label="Retiro" value={formatMoney(host.pickup_service_rate ?? 0)} /><InfoRow label="Patio" value={host.has_yard ? "Sí" : "No"} /><InfoRow label="Acepta" value={(host.accepted_pet_types ?? []).join(", ") || "Consultar"} /><InfoRow label="Tamaños" value={(host.accepted_pet_sizes ?? []).join(", ") || "Consultar"} /><InfoRow label="Evaluación" value={host.rating ? `${host.rating.toFixed(1)} (${host.review_count ?? 0} reseñas)` : "Sin reseñas"} /><InfoRow label="Verificación" value={host.is_verified ? "Verificado" : "Pendiente"} />
+        {(host.rules_and_amenities?.amenities ?? []).length ? <Text style={styles.panelText}>Comodidades: {host.rules_and_amenities?.amenities?.join(", ")}</Text> : null}
       </View>
-      {reservationError ? <View style={styles.bookingErrorCard}><Feather color="#EE7C2B" name="alert-triangle" size={28} /><Text style={styles.panelTitle}>No pudimos completar tu reserva</Text><Text style={styles.panelText}>Inténtalo de nuevo en unos minutos. Si persiste, escríbenos a soporte.</Text><ActionButton busy={saving} icon="refresh-cw" label="Reintentar" onPress={() => void reserve()} variant="primary" /><ActionButton icon="life-buoy" label="Contactar soporte" onPress={onSupport} variant="secondary" /></View> : <View style={styles.panel}><Text style={styles.panelTitle}>Solicitar estadía</Text><Text style={styles.panelText}>{checkIn} → {checkOut}</Text><Segmented items={pets.map((pet) => ({ label: pet.name, value: pet.id }))} value={petId} onChange={setPetId} /><ActionButton busy={saving} icon="calendar" label="Reservar y abrir chat" onPress={() => void reserve()} variant="primary" /></View>}
+      {reservationError ? <View style={styles.bookingErrorCard}><Feather color="#EE7C2B" name="alert-triangle" size={28} /><Text style={styles.panelTitle}>No pudimos completar tu reserva</Text><Text style={styles.panelText}>El backend Provider no aceptó la sesión del cliente. Inténtalo nuevamente o contacta a soporte.</Text><ActionButton busy={saving} icon="refresh-cw" label="Reintentar" onPress={() => void reserve()} variant="primary" /><ActionButton icon="life-buoy" label="Contactar soporte" onPress={onSupport} variant="secondary" /></View> : <View style={styles.panel}><Text style={styles.panelTitle}>Solicitar estadía</Text><Text style={styles.panelText}>{checkIn} → {checkOut}</Text><Segmented items={pets.map((pet) => ({ label: pet.name, value: pet.id }))} value={petId} onChange={setPetId} /><ActionButton busy={saving} icon="calendar" label="Reservar y abrir chat" onPress={() => void reserve()} variant="primary" /></View>}
     </>;
   }
 

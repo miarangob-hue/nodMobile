@@ -34,8 +34,9 @@ La última prueba E2E con dos perfiles cliente confirmó login, creación de mas
 
 ### Limitaciones actuales del backend
 
-- `GET /hosting/search` funciona, pero actualmente no devuelve anfitriones activos. Por esto todavía no se puede certificar una reserva residencial completa.
-- El proveedor `pabloxp@gmail.com` ya tiene un perfil residencial activo en Provider API (`NOD Residencial QA`, Providencia, $25.000 por noche), pero ese perfil todavía no está sincronizado con Customer API.
+- Housing usa Provider API como fuente única: `/search-hosting`, `/get-hosting-host`, `/create-booking-request` y `/get-customer-bookings`. Ya no depende de las tablas Housing de `nod-api`.
+- El proveedor `pabloxp@gmail.com` tiene un perfil residencial activo en Provider API (`NOD Residencial QA`, Providencia, $25.000 por noche).
+- La lectura Housing funciona, pero `POST /create-booking-request` exige Bearer y rechaza actualmente el JWT Customer con `401 Invalid or expired session`, pese a que la especificación vigente indica que debe aceptarlo.
 - El chat de reservas de servicios rechaza el JWT del cliente con `401 Invalid or expired session`. El chat de matches entre mascotas sí funciona.
 - La identidad Provider y la identidad Customer viven en proyectos separados; el backend debe permitir que ambos roles operen sobre la misma reserva residencial.
 - FCM/APNs, pagos, payouts y eliminación definitiva de proveedores requieren certificación en entornos productivos o sandbox.
@@ -44,9 +45,9 @@ La última prueba E2E con dos perfiles cliente confirmó login, creación de mas
 
 ### P0 — Bloqueos de backend
 
-- [ ] Sincronizar en `nod-api` el `hosting_profile` ya activo de `pabloxp@gmail.com` (`6f1a0d46-f3d2-4dca-9f0b-62fc389d9ed6`).
+- [x] Migrar búsqueda, ficha, creación y listado Housing directamente a Provider API.
 - [ ] Certificar Housing E2E: búsqueda, detalle, reserva, listado, confirmación y cancelación.
-- [ ] Vincular la identidad del proveedor entre Provider API y Customer API para operar alojamientos.
+- [ ] Corregir Provider API para aceptar el JWT Customer en `/create-booking-request` y `/cancel-booking`, según la especificación vigente.
 - [ ] Permitir que el chat de reservas valide tanto JWT de cliente como JWT de proveedor, o publicar rutas equivalentes en `nod-api`.
 - [ ] Validar cobertura, disponibilidad, servicio y propiedad de recursos al crear/aceptar reservas.
 - [ ] Publicar eliminación y anonimización de cuentas proveedor.

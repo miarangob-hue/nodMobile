@@ -4,9 +4,8 @@
 
 ## Backend bloqueante
 
-- Sincronizar los perfiles residenciales publicados en Provider con Customer (`nod-api`). Actualmente `GET /hosting/search` responde correctamente con sesión, pero no devuelve anfitriones.
-- Vincular la identidad del proveedor entre Provider y Customer. El JWT emitido por Provider no es válido en Customer, por lo que el anfitrión no puede listar ni cambiar estados de hospedajes mediante `/hosting/bookings`.
-- Sincronizar en Customer API el perfil residencial ya activo del proveedor `pabloxp@gmail.com`. Provider API lo devuelve en búsqueda, pero Customer API responde `404 Host not found` tanto en detalle como al intentar reservarlo.
+- Corregir la autenticación cruzada definida por la especificación vigente: Housing consume Provider API directamente, pero `/create-booking-request` rechaza el JWT Customer con `401 Invalid or expired session` y rechaza la API key sola con `401 Bearer access token required`.
+- Completar y certificar el ciclo de reservas Housing en Provider API después de corregir el Bearer Customer: crear, listar, cancelar y operar estados.
 - Corregir la validación de sesión del chat de reservas cliente–proveedor. Las rutas existen en Provider API, pero rechazan el JWT Customer con `401 Invalid or expired session`. El chat de dating ya funciona.
 - Publicar el flujo dedicado de eliminación y anonimización para cuentas proveedor, equivalente al disponible para clientes.
 
