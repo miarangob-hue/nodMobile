@@ -67,11 +67,11 @@ record("customer bookings", customerBookingsResult.response, customerBookingsRes
 const providerProfileResult = await request(providerBase, providerKey, providerToken, "GET", "/get-provider-dashboard");
 record("provider profile", providerProfileResult.response, providerProfileResult.data);
 
-const pricingResult = await request(providerBase, providerKey, providerToken, "GET", "/update-provider-pricing");
+const pricingResult = await request(providerBase, providerKey, providerToken, "GET", `/update-provider-pricing?provider_id=${providerId}`);
 const pricing = Array.isArray(pricingResult.data) ? pricingResult.data : pricingResult.data?.pricing ?? [];
 record("provider pricing", pricingResult.response, pricingResult.data, { count: pricing.length });
 
-const zonesResult = await request(providerBase, providerKey, providerToken, "GET", "/get-provider-onboarding");
+const zonesResult = await request(providerBase, providerKey, providerToken, "GET", `/get-provider-onboarding?provider_id=${providerId}`);
 const zoneResponse = zonesResult.data?.steps?.flatMap((step) => step.responses ?? []).find((item) => item.field_key === "dog_walker_zones");
 const zones = Array.isArray(zoneResponse?.value) ? zoneResponse.value : [];
 record("provider zones", zonesResult.response, zonesResult.data, { count: zones.length });
@@ -120,7 +120,7 @@ if (mutate) {
       city: "Región Metropolitana de Santiago",
       latitude: -33.4289,
       longitude: -70.6090,
-      notes: "NOD QA E2E 1.0.24 - reserva técnica sin cobro"
+      notes: "NOD QA E2E 1.0.26 - reserva técnica sin cobro"
     });
     const booking = bookingResult.data?.booking ?? bookingResult.data?.reservation ?? bookingResult.data?.data ?? bookingResult.data;
     const bookingId = booking?.id ?? booking?.booking_id ?? booking?.reservation_id;

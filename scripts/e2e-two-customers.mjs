@@ -92,18 +92,31 @@ record("community like", await call(customerBase, customerKey, "POST", `/posts/$
 record("community comment", await call(customerBase, customerKey, "POST", `/posts/${postId}/comments`, { content: "Comentario E2E", pet_id: second.petId }, second.token));
 
 let housingBookingId = null;
-const housingSearch = record("housing search", await call(customerBase, customerKey, "GET", "/hosting/search?pets=1", undefined, first.token));
+const housingSearch = record("housing search", await call(providerBase, providerKey, "GET", "/search-hosting?comuna=Providencia&pets=1&page=1&page_size=50"));
 const host = (housingSearch.items ?? housingSearch.hosts ?? [])[0];
 if (host?.id) {
-  record("housing detail", await call(customerBase, customerKey, "GET", `/hosting/hosts/${host.id}`, undefined, first.token));
+  record("housing detail", await call(providerBase, providerKey, "GET", `/get-hosting-host?id=${host.id}`));
   const checkIn = new Date(Date.now() + 20 * 86400000).toISOString().slice(0, 10);
   const checkOut = new Date(Date.now() + 22 * 86400000).toISOString().slice(0, 10);
-  const housing = record("housing booking", await call(customerBase, customerKey, "POST", "/hosting/bookings", { hosting_profile_id: host.id, check_in: checkIn, check_out: checkOut, pet_ids: [first.petId], pickup_required: false, special_instructions: "Reserva QA E2E" }, first.token));
-  housingBookingId = (housing.booking ?? housing).id;
-  record("housing booking list", await call(customerBase, customerKey, "GET", "/hosting/bookings/my-bookings", undefined, first.token));
-  record("housing booking cancel", await call(customerBase, customerKey, "PUT", `/hosting/bookings/${housingBookingId}/status`, { status: "CANCELLED" }, first.token));
+  const nights = 2;
+  const housing = observe("housing booking with customer JWT", await call(providerBase, providerKey, "POST", "/create-booking-request", {
+    provider_id: host.provider_id,
+    customer_id: first.customerId,
+    service_id: "90e09214-ffeb-4a57-8ba7-e317c2be6d4e",
+    price: Number(host.nightly_rate ?? 0) * nights,
+    currency: host.currency ?? "CLP",
+    starts_at: new Date(`${checkIn}T14:00:00`).toISOString(),
+    ends_at: new Date(`${checkOut}T12:00:00`).toISOString(),
+    payment_status: "unpaid",
+    notes: `Reserva QA E2E; hosting_profile_id=${host.id}; pet_ids=${first.petId}`
+  }, first.token));
+  housingBookingId = (housing?.booking ?? housing)?.id ?? null;
+  const listed = record("housing booking list", await call(providerBase, providerKey, "GET", `/get-customer-bookings?customer_id=${first.customerId}`));
+  const listedBookings = Array.isArray(listed) ? listed : listed.bookings ?? listed.data ?? [];
+  results.push({ name: "housing booking visible", passed: Boolean(housingBookingId && listedBookings.some((item) => (item.id ?? item.booking_id) === housingBookingId)), status: housingBookingId ? 200 : 401, error: housingBookingId ? null : "Booking was not created because Provider rejected the Customer JWT" });
+  if (housingBookingId) record("housing booking cancel", await call(providerBase, providerKey, "POST", "/cancel-booking", { booking_id: housingBookingId, reason: "Limpieza E2E" }, first.token));
 } else {
-  results.push({ name: "housing inventory available", passed: false, status: 404, error: "The authenticated search works, but the backend returned no active host inventory" });
+  results.push({ name: "housing inventory available", passed: false, status: 404, error: "Provider returned no active host inventory" });
 }
 
 let serviceBookingId = null;

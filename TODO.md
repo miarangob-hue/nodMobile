@@ -12,6 +12,8 @@
 
 - [x] Incorporar pruebas unitarias para RUT, normalización de comunas y estados de reserva.
 - [x] Ejecutar prueba de integración de reserva, aceptación, inicio, tracking, pausa, reanudación y cierre en Provider.
+- [x] Certificar el ciclo interno Provider directo: crear, aceptar, iniciar, tracking, pausar, reanudar y completar.
+- [ ] Unificar la reserva creada por Customer con el listado Provider; actualmente no aparece con el mismo `booking_id`.
 - [ ] Incorporar pruebas E2E Android/iOS para teclado, ubicación, mapa y formularios.
 - [x] Agregar CI para ejecutar TypeScript, pruebas y export Android de validación en cada pull request.
 - [ ] Probar permisos denegados y conectividad intermitente en dispositivos reales.

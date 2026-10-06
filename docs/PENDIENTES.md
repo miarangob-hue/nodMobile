@@ -34,6 +34,7 @@
 
 ## Pruebas finales
 
+- Resultado E2E del 6 de octubre de 2026: 24/30 en la corrida integral de dos clientes y 8/8 en el ciclo interno Provider. Los bloqueos reproducibles son JWT Customer en Housing/chat y propagación Customer→Provider de reservas.
 - Ejecutar regresión E2E en teléfonos físicos Android e iPhone: registro, teclado, permisos denegados, cámara, GPS, mapa, red intermitente, reservas, chat y push.
 - Certificar residencial completo cuando backend sincronice anfitriones: búsqueda, reserva, confirmación, chat, ingreso, salida, finalización y cancelación.
 - Certificar pagos reales/sandbox, moderación administrativa y eliminación definitiva de cuentas.

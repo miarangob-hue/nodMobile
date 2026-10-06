@@ -231,6 +231,7 @@ export async function getProviderPerformance({
   accessToken?: string | null;
 }): Promise<ProviderPerformance | null> {
   const response = await apiRequest<ProviderPerformance | ProviderPerformanceResponse>("/get-provider-performance", {
+    query: { provider_id: providerId },
     accessToken
   });
 
@@ -326,7 +327,7 @@ export async function getProviderPayouts({
   accessToken?: string | null;
 }) {
   const response = await apiRequest<ProviderPayout[] | ProviderPayoutsResponse>("/get-provider-payouts", {
-    query: { limit, offset },
+    query: { provider_id: providerId, limit, offset },
     accessToken
   });
 
@@ -527,6 +528,7 @@ export async function getProviderReviewSummary({
   const response = await apiRequest<ProviderReviewSummary | ProviderReviewSummaryResponse>(
     "/get-provider-review-summary",
     {
+      query: { provider_id: providerId },
       accessToken
     }
   );

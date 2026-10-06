@@ -30,7 +30,28 @@ Android y iOS comparten el código funcional y la versión pública `1.0.26`. La
 - Wallet, pagos con Créditos NOD y flujo de Mercado Pago.
 - Solicitud autenticada de eliminación de cuentas de cliente.
 
-La última prueba E2E con dos perfiles cliente confirmó login, creación de mascotas, perfiles sociales, match mutuo, entrega de mensajes, publicación comunitaria, reacciones, comentarios y creación/cancelación de una reserva de servicio. La validación local actual ejecuta **26 pruebas**.
+La validación local actual ejecuta **27 pruebas**. La certificación E2E más reciente se realizó el 6 de octubre de 2026 contra los backends desplegados.
+
+### Matriz E2E — 6 de octubre de 2026
+
+| Área | Resultado | Evidencia |
+|---|---|---|
+| Login Customer y Provider | Aprobado | Ambas sesiones respondieron `200` |
+| Perfil, mascotas y ficha médica | Aprobado | Lectura autenticada `200` |
+| Dating y match mutuo | Aprobado con observación | Likes mutuos crean match; el candidato recién creado no siempre aparece inmediatamente en el feed |
+| Chat de match entre mascotas | Aprobado | Mensaje creado `201` y recibido por el segundo perfil `200` |
+| Comunidad | Aprobado | Publicación `201`, like `200` y comentario `201` |
+| Catálogo y reserva normal | Parcial | Reserva y cancelación funcionan en Customer; la reserva no aparece en Provider |
+| Ciclo interno Provider | Aprobado | Crear, aceptar, iniciar, tracking, pausar, reanudar y completar funcionan |
+| Chat de reserva de servicio | Bloqueado | Provider rechaza JWT Customer con `401 Invalid or expired session` |
+| Housing: búsqueda y ficha | Aprobado | `/search-hosting` y `/get-hosting-host` responden `200` con disponibilidad |
+| Housing: reserva | Bloqueado | `/create-booking-request` rechaza API key sola y JWT Customer |
+| Wallet, compras y notificaciones Customer | Aprobado | Consultas autenticadas `200` |
+| Finanzas, documentos y reputación Provider | Aprobado | Balance, rendimiento, payouts, movimientos, bancos, impuestos, documentos y reseñas `200` |
+| Seguridad sin sesión | Aprobado | Customer y Provider rechazan recursos privados con `401` |
+| Páginas legales | Aprobado | Privacidad, términos y eliminación responden `200` |
+
+La corrida de dos perfiles obtuvo **24/30 comprobaciones**. Los seis fallos corresponden a propagación inmediata del candidato, reserva Housing y las tres operaciones del chat de reservas. El ciclo Provider independiente aprobó **8/8 operaciones**.
 
 ### Limitaciones actuales del backend
 
@@ -38,7 +59,7 @@ La última prueba E2E con dos perfiles cliente confirmó login, creación de mas
 - El proveedor `pabloxp@gmail.com` tiene un perfil residencial activo en Provider API (`NOD Residencial QA`, Providencia, $25.000 por noche).
 - La lectura Housing funciona, pero `POST /create-booking-request` exige Bearer y rechaza actualmente el JWT Customer con `401 Invalid or expired session`, pese a que la especificación vigente indica que debe aceptarlo.
 - El chat de reservas de servicios rechaza el JWT del cliente con `401 Invalid or expired session`. El chat de matches entre mascotas sí funciona.
-- La identidad Provider y la identidad Customer viven en proyectos separados; el backend debe permitir que ambos roles operen sobre la misma reserva residencial.
+- Las reservas normales creadas en Customer no aparecen en el listado Provider, aunque el ciclo creado directamente dentro de Provider funciona completo.
 - FCM/APNs, pagos, payouts y eliminación definitiva de proveedores requieren certificación en entornos productivos o sandbox.
 
 ## TO-DO
@@ -49,6 +70,7 @@ La última prueba E2E con dos perfiles cliente confirmó login, creación de mas
 - [ ] Certificar Housing E2E: búsqueda, detalle, reserva, listado, confirmación y cancelación.
 - [ ] Corregir Provider API para aceptar el JWT Customer en `/create-booking-request` y `/cancel-booking`, según la especificación vigente.
 - [ ] Permitir que el chat de reservas valide tanto JWT de cliente como JWT de proveedor, o publicar rutas equivalentes en `nod-api`.
+- [ ] Hacer visible en Provider la misma reserva normal creada por Customer, conservando un único `booking_id`.
 - [ ] Validar cobertura, disponibilidad, servicio y propiedad de recursos al crear/aceptar reservas.
 - [ ] Publicar eliminación y anonimización de cuentas proveedor.
 
@@ -61,6 +83,7 @@ La última prueba E2E con dos perfiles cliente confirmó login, creación de mas
 - [ ] Ejecutar regresión E2E en dispositivos físicos: permisos, cámara, GPS, mapas, teclado y red intermitente.
 - [ ] Probar moderación comunitaria con un usuario que tenga `admin:moderation`.
 - [ ] Probar el flujo definitivo de eliminación y anonimización de clientes.
+- [ ] Repetir Google Login, push, pagos y permisos en dispositivos físicos con credenciales de producción/sandbox; no son certificables únicamente por HTTP.
 
 ### P2 — Producto y publicación
 
