@@ -5,7 +5,7 @@
 ## Backend bloqueante
 
 - Corregir la autenticación cruzada definida por la especificación vigente: Housing consume Provider API directamente, pero `/create-booking-request` rechaza el JWT Customer con `401 Invalid or expired session` y rechaza la API key sola con `401 Bearer access token required`.
-- Completar y certificar el ciclo de reservas Housing en Provider API después de corregir el Bearer Customer: crear, listar, cancelar y operar estados.
+- El ciclo Housing de Provider quedó certificado con JWT Provider (crear, listar, confirmar y cancelar). Falta aceptar Bearer Customer para que ese mismo ciclo funcione desde la app cliente.
 - Corregir la validación de sesión del chat de reservas cliente–proveedor. Las rutas existen en Provider API, pero rechazan el JWT Customer con `401 Invalid or expired session`. El chat de dating ya funciona.
 - Publicar el flujo dedicado de eliminación y anonimización para cuentas proveedor, equivalente al disponible para clientes.
 
@@ -34,7 +34,7 @@
 
 ## Pruebas finales
 
-- Resultado E2E del 6 de octubre de 2026: 24/30 en la corrida integral de dos clientes y 8/8 en el ciclo interno Provider. Los bloqueos reproducibles son JWT Customer en Housing/chat y propagación Customer→Provider de reservas.
+- Resultado E2E del 6 de octubre de 2026: 24/30 en la corrida integral de dos clientes, 8/8 en el ciclo interno Provider y 8/9 en Housing dedicado. Los bloqueos reproducibles son JWT Customer en Housing/chat y propagación Customer→Provider de reservas.
 - Ejecutar regresión E2E en teléfonos físicos Android e iPhone: registro, teclado, permisos denegados, cámara, GPS, mapa, red intermitente, reservas, chat y push.
 - Certificar residencial completo cuando backend sincronice anfitriones: búsqueda, reserva, confirmación, chat, ingreso, salida, finalización y cancelación.
 - Certificar pagos reales/sandbox, moderación administrativa y eliminación definitiva de cuentas.

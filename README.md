@@ -45,13 +45,13 @@ La validación local actual ejecuta **27 pruebas**. La certificación E2E más r
 | Ciclo interno Provider | Aprobado | Crear, aceptar, iniciar, tracking, pausar, reanudar y completar funcionan |
 | Chat de reserva de servicio | Bloqueado | Provider rechaza JWT Customer con `401 Invalid or expired session` |
 | Housing: búsqueda y ficha | Aprobado | `/search-hosting` y `/get-hosting-host` responden `200` con disponibilidad |
-| Housing: reserva | Bloqueado | `/create-booking-request` rechaza API key sola y JWT Customer |
+| Housing: reserva | Backend aprobado; móvil bloqueado | Con JWT Provider: crear `201`, listar `200`, confirmar `200` y cancelar `200`; con JWT Customer: `401` |
 | Wallet, compras y notificaciones Customer | Aprobado | Consultas autenticadas `200` |
 | Finanzas, documentos y reputación Provider | Aprobado | Balance, rendimiento, payouts, movimientos, bancos, impuestos, documentos y reseñas `200` |
 | Seguridad sin sesión | Aprobado | Customer y Provider rechazan recursos privados con `401` |
 | Páginas legales | Aprobado | Privacidad, términos y eliminación responden `200` |
 
-La corrida de dos perfiles obtuvo **24/30 comprobaciones**. Los seis fallos corresponden a propagación inmediata del candidato, reserva Housing y las tres operaciones del chat de reservas. El ciclo Provider independiente aprobó **8/8 operaciones**.
+La corrida de dos perfiles obtuvo **24/30 comprobaciones**. Los seis fallos corresponden a propagación inmediata del candidato, reserva Housing con JWT Customer y las tres operaciones del chat de reservas. El ciclo Provider independiente aprobó **8/8 operaciones**. La prueba Housing dedicada aprobó **8/9**: búsqueda, ficha, disponibilidad, creación con JWT Provider, listado, confirmación y cancelación funcionaron; solo falló la creación con JWT Customer.
 
 ### Limitaciones actuales del backend
 
@@ -67,7 +67,7 @@ La corrida de dos perfiles obtuvo **24/30 comprobaciones**. Los seis fallos corr
 ### P0 — Bloqueos de backend
 
 - [x] Migrar búsqueda, ficha, creación y listado Housing directamente a Provider API.
-- [ ] Certificar Housing E2E: búsqueda, detalle, reserva, listado, confirmación y cancelación.
+- [x] Certificar el ciclo backend Housing: búsqueda, detalle, disponibilidad, creación, listado, confirmación y cancelación.
 - [ ] Corregir Provider API para aceptar el JWT Customer en `/create-booking-request` y `/cancel-booking`, según la especificación vigente.
 - [ ] Permitir que el chat de reservas valide tanto JWT de cliente como JWT de proveedor, o publicar rutas equivalentes en `nod-api`.
 - [ ] Hacer visible en Provider la misma reserva normal creada por Customer, conservando un único `booking_id`.

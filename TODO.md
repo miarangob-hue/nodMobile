@@ -30,6 +30,7 @@
 - [x] Integrar feed comunitario global, publicaciones con foto, reacciones y comentarios mediante `/feed` y `/posts`.
 - [ ] Persistir logros/medallas en backend y agregar ranking comunitario; hoy el progreso se deriva de los spots sincronizados.
 - [x] Migrar Housing a Provider API como fuente única (`search-hosting`, `get-hosting-host`, `create-booking-request`, `get-customer-bookings`).
+- [x] Probar Housing backend E2E con JWT Provider: búsqueda, disponibilidad, creación, listado, confirmación y cancelación.
 - [ ] Hacer que Provider API acepte el JWT Customer para crear y cancelar reservas Housing; actualmente responde `401 Invalid or expired session`.
 - [ ] Corregir el chat de reservas: Provider API rechaza el JWT Customer aunque las rutas ya existen.
 - [x] Incorporar borradores de privacidad, términos y solicitud autenticada de eliminación de cuenta.
