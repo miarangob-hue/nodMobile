@@ -247,14 +247,14 @@ export async function searchProviders({
 }
 
 export async function getCustomerBookings({
-  customerId: _customerId,
+  customerId,
   accessToken
 }: {
   customerId: string;
   accessToken?: string | null;
 }) {
-  const response = await apiRequest<CustomerBooking[] | BookingsResponse>("/bookings", {
-    apiKeyKind: "customer",
+  const response = await apiRequest<CustomerBooking[] | BookingsResponse>("/get-customer-bookings", {
+    query: { customer_id: customerId },
     accessToken
   });
 
@@ -299,21 +299,15 @@ export async function createBooking({
   notes?: string | null;
   accessToken?: string | null;
 }) {
-  const response = await apiRequest<BookingResponse>("/bookings", {
+  const response = await apiRequest<BookingResponse>("/create-booking-request", {
     method: "POST",
     body: {
       provider_id: providerId,
-      pet_id: petId,
       service_id: serviceId,
       starts_at: startsAt,
       ends_at: endsAt,
-      address,
-      comuna,
-      city,
-      latitude,
-      longitude,
       price,
-      currency,
+      currency: currency ?? "CLP",
       notes: appendProviderBookingMetadata(notes, {
         pet_id: petId,
         pet_name: petName,
@@ -327,7 +321,6 @@ export async function createBooking({
         currency
       })
     },
-    apiKeyKind: "customer",
     accessToken
   });
 
@@ -349,7 +342,7 @@ export async function cancelCustomerBooking({
   bookingId,
   customerId: _customerId,
   reason,
-  refundDestination,
+  refundDestination: _refundDestination,
   accessToken
 }: {
   bookingId: string;
@@ -358,13 +351,12 @@ export async function cancelCustomerBooking({
   refundDestination?: "original_payment_method" | "nod_credits";
   accessToken?: string | null;
 }) {
-  const response = await apiRequest<BookingResponse>(`/bookings/${encodeURIComponent(bookingId)}/cancel`, {
+  const response = await apiRequest<BookingResponse>("/cancel-booking", {
     method: "POST",
     body: {
-      reason,
-      refund_destination: refundDestination
+      booking_id: bookingId,
+      reason
     },
-    apiKeyKind: "customer",
     accessToken
   });
 
@@ -378,9 +370,8 @@ export async function getCustomerServiceRoute({
   bookingId: string;
   accessToken?: string | null;
 }) {
-  const response = await apiRequest<ServiceLocation[] | RouteResponse>(`/bookings/${bookingId}/route`, {
+  const response = await apiRequest<ServiceLocation[] | RouteResponse>("/get-service-route", {
     query: { booking_id: bookingId },
-    apiKeyKind: "customer",
     accessToken
   });
 
@@ -404,9 +395,8 @@ export async function getCustomerServicePhotos({
   bookingId: string;
   accessToken?: string | null;
 }) {
-  const response = await apiRequest<ServicePhoto[] | PhotosResponse>(`/bookings/${bookingId}/photos`, {
+  const response = await apiRequest<ServicePhoto[] | PhotosResponse>("/get-service-photos", {
     query: { booking_id: bookingId },
-    apiKeyKind: "customer",
     warnOnError: false,
     accessToken
   });

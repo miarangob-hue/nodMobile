@@ -30,18 +30,18 @@ Android y iOS comparten el código funcional y la versión pública `1.0.26`. La
 - Wallet, pagos con Créditos NOD y flujo de Mercado Pago.
 - Solicitud autenticada de eliminación de cuentas de cliente.
 
-La validación local actual ejecuta **29 pruebas**. La certificación E2E más reciente se realizó contra los backends desplegados después de la resolución P0.
+La validación local actual ejecuta **29 pruebas**. La certificación E2E más reciente se realizó el 8 de octubre de 2026 contra los backends desplegados después de la centralización de reservas.
 
-### Matriz E2E — 6 de octubre de 2026
+### Matriz E2E — 8 de octubre de 2026
 
 | Área | Resultado | Evidencia |
 |---|---|---|
 | Login Customer y Provider | Aprobado | Ambas sesiones respondieron `200` |
 | Perfil, mascotas y ficha médica | Aprobado | Lectura autenticada `200` |
-| Dating y match mutuo | Aprobado con observación | Likes mutuos crean match; el candidato recién creado no siempre aparece inmediatamente en el feed |
+| Dating y match mutuo | Aprobado con requisito | Discovery omite perfiles sin foto principal; likes mutuos crean match y chat funciona |
 | Chat de match entre mascotas | Aprobado | Mensaje creado `201` y recibido por el segundo perfil `200` |
 | Comunidad | Aprobado | Publicación `201`, like `200` y comentario `201` |
-| Catálogo y reserva normal | Parcial | Reserva y cancelación funcionan en Customer; la reserva no aparece en Provider |
+| Catálogo y reserva normal | Aprobado | Creación, listado, chat y cancelación usan Provider API como fuente única |
 | Ciclo interno Provider | Aprobado | Crear, aceptar, iniciar, tracking, pausar, reanudar y completar funcionan |
 | Chat de reserva de servicio | Aprobado tras corrección P0 | Customer crea/abre chat, envía con `body`, lista y marca lectura con `200/201` |
 | Housing: búsqueda y ficha | Aprobado | `/search-hosting` y `/get-hosting-host` responden `200` con disponibilidad |
@@ -51,14 +51,16 @@ La validación local actual ejecuta **29 pruebas**. La certificación E2E más r
 | Seguridad sin sesión | Aprobado | Customer y Provider rechazan recursos privados con `401` |
 | Páginas legales | Aprobado | Privacidad, términos y eliminación responden `200` |
 
-La corrida inicial de dos perfiles obtuvo **24/30 comprobaciones**. Tras la resolución P0, la certificación dedicada Housing + chat con JWT Customer obtuvo **8/8**: creación `201`, listado `200`, apertura de chat `201`, envío `201`, recepción `200`, lectura `200` y cancelación `200`. El backend desplegado exige `customer_id` en la query de `/get-customer-bookings` y el campo `body` en `/send-chat-message`; la app usa esos contratos efectivos.
+La recertificación posterior a la centralización obtuvo **38/38 comprobaciones**: Discovery con foto principal, match y chat, comunidad, reservas normales y Housing funcionan de extremo a extremo. Ambos tipos de reserva crean, abren chat, envían/listan mensajes y cancelan correctamente en Provider API. El backend exige subir la foto social mediante `/pets/:id/social-profile/photos`, `customer_id` en la query de `/get-customer-bookings` y el campo `body` en `/send-chat-message`; la app y la suite usan esos contratos efectivos.
+
+La regresión autenticada Customer → Provider también confirmó creación, visibilidad inmediata, aceptación, inicio, tracking, pausa, reanudación, finalización y consulta posterior sobre el mismo `booking_id`. El export Android de producción local terminó correctamente. La ruta documentada `/pets/:id/social-discovery` no está publicada; Mobile usa el contrato real `GET /discovery/candidates`.
 
 ### Limitaciones actuales del backend
 
-- Housing usa Provider API como fuente única: `/search-hosting`, `/get-hosting-host`, `/create-booking-request` y `/get-customer-bookings`. Ya no depende de las tablas Housing de `nod-api`.
+- Todas las reservas usan Provider API como fuente única: `/create-booking-request`, `/get-customer-bookings` y `/cancel-booking`; Housing agrega `/search-hosting` y `/get-hosting-host`.
 - El proveedor `pabloxp@gmail.com` tiene un perfil residencial activo en Provider API (`NOD Residencial QA`, Providencia, $25.000 por noche).
 - Housing y chat de reservas ya aceptan conjuntamente `x-api-key` y JWT Customer. La identidad del cliente se obtiene del token y la app no envía `customer_id` al crear la reserva.
-- Las reservas normales creadas en Customer no aparecen en el listado Provider, aunque el ciclo creado directamente dentro de Provider funciona completo.
+- Customer API retiró `GET/POST /bookings` y `/bookings/:id/cancel`; la app ya no depende de esas rutas.
 - FCM/APNs, pagos, payouts y eliminación definitiva de proveedores requieren certificación en entornos productivos o sandbox.
 
 ## TO-DO
@@ -69,7 +71,7 @@ La corrida inicial de dos perfiles obtuvo **24/30 comprobaciones**. Tras la reso
 - [x] Certificar el ciclo backend Housing: búsqueda, detalle, disponibilidad, creación, listado, confirmación y cancelación.
 - [x] Validar JWT Customer en `/create-booking-request` y `/cancel-booking` sin confiar en `customer_id` del body.
 - [x] Habilitar chat de reservas para Customer: crear, enviar, listar y marcar lectura.
-- [ ] Hacer visible en Provider la misma reserva normal creada por Customer, conservando un único `booking_id`.
+- [x] Crear y operar reservas normales directamente en Provider, conservando un único `booking_id`.
 - [ ] Validar cobertura, disponibilidad, servicio y propiedad de recursos al crear/aceptar reservas.
 - [ ] Publicar eliminación y anonimización de cuentas proveedor.
 

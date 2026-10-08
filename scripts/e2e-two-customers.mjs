@@ -68,6 +68,9 @@ async function createProfile(label, offset, pet) {
     looking_for: ["playdate", "walk"], vaccinated: true, sterilized: true, latitude: -33.4289,
     longitude: -70.6090, comuna: "Providencia", discovery_enabled: true
   }, token));
+  record(`social photo ${label}`, await call(customerBase, customerKey, "POST", `/pets/${petRecord.id}/social-profile/photos`, {
+    photo_base64: tinyPng.replace(/^data:image\/png;base64,/, ""), mime_type: "image/png", is_primary: true
+  }, token));
   return { email, token, customerId, petId: petRecord.id };
 }
 
@@ -112,7 +115,15 @@ if (host?.id) {
   const listed = record("housing booking list", await call(providerBase, providerKey, "GET", `/get-customer-bookings?customer_id=${first.customerId}`, undefined, first.token));
   const listedBookings = Array.isArray(listed) ? listed : listed.bookings ?? listed.data ?? [];
   results.push({ name: "housing booking visible", passed: Boolean(housingBookingId && listedBookings.some((item) => (item.id ?? item.booking_id) === housingBookingId)), status: housingBookingId ? 200 : 401, error: housingBookingId ? null : "Booking was not created because Provider rejected the Customer JWT" });
-  if (housingBookingId) record("housing booking cancel", await call(providerBase, providerKey, "POST", "/cancel-booking", { booking_id: housingBookingId, reason: "Limpieza E2E" }, first.token));
+  if (housingBookingId) {
+    record("housing chat open", await call(providerBase, providerKey, "POST", "/get-or-create-booking-chat", { booking_id: housingBookingId }, first.token));
+    record("housing chat send", await call(providerBase, providerKey, "POST", "/send-chat-message", { booking_id: housingBookingId, body: "Mensaje E2E de Housing" }, first.token));
+    const housingMessages = record("housing chat list", await call(providerBase, providerKey, "GET", `/get-chat-messages?booking_id=${housingBookingId}`, undefined, first.token));
+    const housingMessageItems = Array.isArray(housingMessages) ? housingMessages : housingMessages.messages ?? housingMessages.items ?? [];
+    results.push({ name: "housing chat message delivered", passed: housingMessageItems.some((item) => (item.body ?? item.text) === "Mensaje E2E de Housing"), status: 200, error: null });
+    record("housing chat read", await call(providerBase, providerKey, "POST", "/mark-chat-read", { booking_id: housingBookingId }, first.token));
+    record("housing booking cancel", await call(providerBase, providerKey, "POST", "/cancel-booking", { booking_id: housingBookingId, reason: "Limpieza E2E" }, first.token));
+  }
 } else {
   results.push({ name: "housing inventory available", passed: false, status: 404, error: "Provider returned no active host inventory" });
 }
@@ -132,13 +143,13 @@ results.push({ name: "provider catalog", passed: Boolean(provider), status: prov
 if (provider?.id && serviceId) {
   const startsAt = new Date(Date.now() + 10 * 86400000).toISOString();
   const endsAt = new Date(Date.now() + 10 * 86400000 + 3600000).toISOString();
-  const bookingPayload = record("service booking", await call(customerBase, customerKey, "POST", "/bookings", { provider_id: provider.id, pet_id: first.petId, service_id: serviceId, starts_at: startsAt, ends_at: endsAt, address: "Av. Providencia 1234", comuna: "Providencia", city: "Santiago" }, first.token));
+  const bookingPayload = record("service booking", await call(providerBase, providerKey, "POST", "/create-booking-request", { provider_id: provider.id, service_id: serviceId, starts_at: startsAt, ends_at: endsAt, price: Number(provider.price_from ?? 0), currency: provider.currency ?? "CLP", notes: `Reserva normal QA E2E; pet_id=${first.petId}; address=Av. Providencia 1234; comuna=Providencia; city=Santiago` }, first.token));
   serviceBookingId = (bookingPayload.booking ?? bookingPayload.reservation ?? bookingPayload).id;
   if (serviceBookingId) {
     observe("booking chat open", await call(providerBase, providerKey, "POST", "/get-or-create-booking-chat", { booking_id: serviceBookingId }, first.token));
     observe("booking chat send", await call(providerBase, providerKey, "POST", "/send-chat-message", { booking_id: serviceBookingId, body: "Mensaje E2E de cliente" }, first.token));
     observe("booking chat list", await call(providerBase, providerKey, "GET", `/get-chat-messages?booking_id=${serviceBookingId}`, undefined, first.token));
-    record("service booking cancel", await call(customerBase, customerKey, "POST", `/bookings/${serviceBookingId}/cancel`, { reason: "Limpieza E2E" }, first.token), [200, 201, 204]);
+    record("service booking cancel", await call(providerBase, providerKey, "POST", "/cancel-booking", { booking_id: serviceBookingId, reason: "Limpieza E2E" }, first.token), [200, 201, 204]);
   }
 } else {
   results.push({ name: "bookable provider available", passed: false, status: 404, error: "Provider catalog did not expose a service_id" });

@@ -60,7 +60,7 @@ const petsResult = await request(customerBase, customerKey, customerToken, "GET"
 const pets = Array.isArray(petsResult.data) ? petsResult.data : petsResult.data?.pets ?? petsResult.data?.data ?? [];
 record("customer pets", petsResult.response, petsResult.data, { count: pets.length });
 
-const customerBookingsResult = await request(customerBase, customerKey, customerToken, "GET", "/bookings");
+const customerBookingsResult = await request(providerBase, providerKey, customerToken, "GET", `/get-customer-bookings?customer_id=${customerId}`);
 const customerBookings = Array.isArray(customerBookingsResult.data) ? customerBookingsResult.data : customerBookingsResult.data?.bookings ?? customerBookingsResult.data?.data ?? [];
 record("customer bookings", customerBookingsResult.response, customerBookingsResult.data, { count: customerBookings.length });
 
@@ -109,18 +109,14 @@ if (mutate) {
   } else {
     const startsAt = new Date(Date.now() + 5 * 60_000).toISOString();
     const endsAt = new Date(Date.now() + 65 * 60_000).toISOString();
-    const bookingResult = await request(customerBase, customerKey, customerToken, "POST", "/bookings", {
+    const bookingResult = await request(providerBase, providerKey, customerToken, "POST", "/create-booking-request", {
       provider_id: providerId,
-      pet_id: pet.id,
       service_id: serviceId,
       starts_at: startsAt,
       ends_at: endsAt,
-      address: "Av. Providencia 1234, Providencia, Chile",
-      comuna: "Providencia",
-      city: "Región Metropolitana de Santiago",
-      latitude: -33.4289,
-      longitude: -70.6090,
-      notes: "NOD QA E2E 1.0.26 - reserva técnica sin cobro"
+      price: Number(price?.price ?? 0),
+      currency: price?.currency ?? "CLP",
+      notes: `NOD QA E2E 1.0.26 - reserva técnica sin cobro; pet_id=${pet.id}; address=Av. Providencia 1234, Providencia, Chile; comuna=Providencia; city=Región Metropolitana de Santiago; latitude=-33.4289; longitude=-70.6090`
     });
     const booking = bookingResult.data?.booking ?? bookingResult.data?.reservation ?? bookingResult.data?.data ?? bookingResult.data;
     const bookingId = booking?.id ?? booking?.booking_id ?? booking?.reservation_id;
@@ -179,7 +175,7 @@ if (mutate) {
         }
       }
 
-      for (const [name, path] of [["booking detail", `/bookings/${bookingId}`], ["booking timeline", `/bookings/${bookingId}/timeline`], ["booking eta", `/bookings/${bookingId}/eta`], ["booking route", `/bookings/${bookingId}/route`], ["booking photos", `/bookings/${bookingId}/photos`]]) {
+      for (const [name] of [["booking detail"], ["booking timeline"], ["booking eta"], ["booking route"], ["booking photos"]]) {
         const customerService = await request(providerBase, providerKey, null, "GET", `/get-customer-services?booking_id=${bookingId}`);
         record(name, customerService.response, customerService.data);
       }

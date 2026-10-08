@@ -17,14 +17,14 @@ function mockJsonResponse(body: unknown) {
 afterEach(() => vi.unstubAllGlobals());
 
 describe("session-scoped backend contracts", () => {
-  it("lists customer bookings through nod-api with API key and Bearer", async () => {
+  it("lists customer bookings through Provider API with API key and Bearer", async () => {
     const fetchMock = mockJsonResponse({ bookings: [] });
 
     await getCustomerBookings({ customerId: "customer-id", accessToken: "customer-token" });
 
     const [url, options] = fetchMock.mock.calls[0];
-    expect(url).toContain("/nod-api/bookings");
-    expect(url).not.toContain("customer_id");
+    expect(url).toContain("/get-customer-bookings");
+    expect(url).toContain("customer_id=customer-id");
     expect(options.headers.Authorization).toBe("Bearer customer-token");
     expect(options.headers["x-api-key"]).toBeDefined();
   });
@@ -43,7 +43,7 @@ describe("session-scoped backend contracts", () => {
 
     const [url, options] = fetchMock.mock.calls[0];
     const body = JSON.parse(options.body);
-    expect(url).toContain("/nod-api/bookings");
+    expect(url).toContain("/create-booking-request");
     expect(body.customer_id).toBeUndefined();
     expect(body.provider_id).toBe("selected-provider-id");
     expect(options.headers.Authorization).toBe("Bearer customer-token");
