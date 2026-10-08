@@ -2003,7 +2003,7 @@ function BookingCustomerChat({ accessToken, bookingId, customerId }: { accessTok
   }
   return <View style={styles.panel}><Text style={styles.panelTitle}>Chat con el proveedor</Text>
     {chatError ? <Text style={styles.error}>Chat temporalmente no disponible: {chatError}</Text> : null}
-    <View style={styles.bookingChatList}>{messages.length ? messages.slice(-6).map((message) => <View key={message.id} style={[styles.matchMessage, message.sender_id === customerId && styles.matchMessageOwn]}><Text style={styles.matchMessageText}>{message.text ?? "Adjunto"}</Text></View>) : <Text style={styles.panelText}>Envía un mensaje para coordinar el servicio.</Text>}</View>
+    <View style={styles.bookingChatList}>{messages.length ? messages.slice(-6).map((message) => <View key={message.id} style={[styles.matchMessage, message.sender_id === customerId && styles.matchMessageOwn]}><Text style={styles.matchMessageText}>{message.body ?? message.text ?? "Adjunto"}</Text></View>) : <Text style={styles.panelText}>Envía un mensaje para coordinar el servicio.</Text>}</View>
     <View style={styles.chatComposer}><TextInput autoCorrect={false} editable={Boolean(chat)} keyboardType={Platform.OS === "android" ? "visible-password" : "default"} onChangeText={setDraft} placeholder={chat ? "Escribe un mensaje…" : "Chat no disponible"} showSoftInputOnFocus style={styles.chatInput} value={draft} /><Pressable disabled={sending || !chat || !draft.trim()} onPress={() => void submit()} style={[styles.chatSend, (sending || !chat || !draft.trim()) && { opacity: 0.5 }]}><Feather color="#ffffff" name="send" size={18} /></Pressable></View>
   </View>;
 }

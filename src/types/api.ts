@@ -354,8 +354,12 @@ export type ChatMessage = {
   id: UUID;
   chat_id: UUID;
   sender_id: UUID;
+  sender_type?: "customer" | "provider" | string;
+  body?: string | null;
   text?: string | null;
   attachment_url?: string | null;
+  read_by_provider_at?: string | null;
+  read_by_customer_at?: string | null;
   read_at?: string | null;
   created_at: string;
 };

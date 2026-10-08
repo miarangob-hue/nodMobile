@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createBooking, getCustomerBookings } from "./customer";
 import { getCommunityFeed } from "./community";
-import { searchHosting } from "./hosting";
-import { getProviderBalance } from "./provider";
+import { createHostingBooking, searchHosting } from "./hosting";
+import { getProviderBalance, sendChatMessage } from "./provider";
 
 function mockJsonResponse(body: unknown) {
   const fetchMock = vi.fn().mockResolvedValue({
@@ -80,5 +80,36 @@ describe("session-scoped backend contracts", () => {
     expect(fetchMock.mock.calls[0][0]).toContain("/search-hosting");
     expect(fetchMock.mock.calls[0][0]).not.toContain("/nod-api/");
     expect(result.items[0]).toMatchObject({ id: "host-id", provider_id: "provider-id" });
+  });
+
+  it("creates housing with the authenticated Customer identity instead of a caller id", async () => {
+    const fetchMock = mockJsonResponse({ booking: { id: "housing-booking", status: "pending" } });
+
+    await createHostingBooking({
+      hostingProfileId: "host-id",
+      providerId: "provider-id",
+      customerId: "untrusted-customer-id",
+      checkIn: "2026-12-10",
+      checkOut: "2026-12-12",
+      petIds: ["pet-id"],
+      price: 50000,
+      accessToken: "customer-token"
+    });
+
+    const [url, options] = fetchMock.mock.calls[0];
+    const body = JSON.parse(options.body);
+    expect(url).toContain("/create-booking-request");
+    expect(body.customer_id).toBeUndefined();
+    expect(body.payment_status).toBeUndefined();
+    expect(options.headers.Authorization).toBe("Bearer customer-token");
+  });
+
+  it("sends booking chat content using the deployed body field", async () => {
+    const fetchMock = mockJsonResponse({ message: { id: "message-id", chat_id: "chat-id", sender_id: "customer-id", body: "Hola", created_at: "2026-10-08T00:00:00Z" } });
+
+    await sendChatMessage({ chatId: "booking-id", senderId: "customer-id", text: "Hola", accessToken: "customer-token" });
+
+    const [, options] = fetchMock.mock.calls[0];
+    expect(JSON.parse(options.body)).toEqual({ booking_id: "booking-id", body: "Hola" });
   });
 });

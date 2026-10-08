@@ -45,18 +45,16 @@ export function getHostingHost(id: string, from?: string, to?: string, _accessTo
   return apiRequest<HostingDetail>("/get-hosting-host", { query: { id, from, to }, warnOnError: false });
 }
 
-export async function createHostingBooking({ hostingProfileId, providerId, customerId, checkIn, checkOut, petIds, price, currency = "CLP", specialInstructions, accessToken }: { hostingProfileId: string; providerId: string; customerId: string; checkIn: string; checkOut: string; petIds: string[]; price: number; currency?: string; specialInstructions?: string | null; accessToken?: string | null }): Promise<HostingBooking | undefined> {
+export async function createHostingBooking({ hostingProfileId, providerId, customerId: _customerId, checkIn, checkOut, petIds, price, currency = "CLP", specialInstructions, accessToken }: { hostingProfileId: string; providerId: string; customerId: string; checkIn: string; checkOut: string; petIds: string[]; price: number; currency?: string; specialInstructions?: string | null; accessToken?: string | null }): Promise<HostingBooking | undefined> {
   const response = await apiRequest<{ booking?: Record<string, unknown>; reservation?: Record<string, unknown> } | Record<string, unknown>>("/create-booking-request", {
     method: "POST", accessToken,
     body: {
       provider_id: providerId,
-      customer_id: customerId,
       service_id: HOSTING_SERVICE_ID,
       price,
       currency,
       starts_at: new Date(`${checkIn}T14:00:00`).toISOString(),
       ends_at: new Date(`${checkOut}T12:00:00`).toISOString(),
-      payment_status: "unpaid",
       notes: [specialInstructions, `hosting_profile_id=${hostingProfileId}`, `pet_ids=${petIds.join(",")}`].filter(Boolean).join("; ")
     }
   });
@@ -64,8 +62,8 @@ export async function createHostingBooking({ hostingProfileId, providerId, custo
   return raw ? normalizeHostingBooking(raw) : undefined;
 }
 
-export async function getMyHostingBookings(customerId: string, _accessToken?: string | null) {
-  const response = await apiRequest<{ bookings?: Record<string, unknown>[]; data?: Record<string, unknown>[] } | Record<string, unknown>[]>("/get-customer-bookings", { query: { customer_id: customerId } });
+export async function getMyHostingBookings(customerId: string, accessToken?: string | null) {
+  const response = await apiRequest<{ bookings?: Record<string, unknown>[]; data?: Record<string, unknown>[] } | Record<string, unknown>[]>("/get-customer-bookings", { query: { customer_id: customerId }, accessToken });
   const items = Array.isArray(response) ? response : response.bookings ?? response.data ?? [];
   return items.filter((item) => item.service_id === HOSTING_SERVICE_ID || String(item.notes ?? "").includes("hosting_profile_id=")).map(normalizeHostingBooking);
 }

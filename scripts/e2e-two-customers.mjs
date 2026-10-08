@@ -101,17 +101,15 @@ if (host?.id) {
   const nights = 2;
   const housing = observe("housing booking with customer JWT", await call(providerBase, providerKey, "POST", "/create-booking-request", {
     provider_id: host.provider_id,
-    customer_id: first.customerId,
     service_id: "90e09214-ffeb-4a57-8ba7-e317c2be6d4e",
     price: Number(host.nightly_rate ?? 0) * nights,
     currency: host.currency ?? "CLP",
     starts_at: new Date(`${checkIn}T14:00:00`).toISOString(),
     ends_at: new Date(`${checkOut}T12:00:00`).toISOString(),
-    payment_status: "unpaid",
     notes: `Reserva QA E2E; hosting_profile_id=${host.id}; pet_ids=${first.petId}`
   }, first.token));
   housingBookingId = (housing?.booking ?? housing)?.id ?? null;
-  const listed = record("housing booking list", await call(providerBase, providerKey, "GET", `/get-customer-bookings?customer_id=${first.customerId}`));
+  const listed = record("housing booking list", await call(providerBase, providerKey, "GET", `/get-customer-bookings?customer_id=${first.customerId}`, undefined, first.token));
   const listedBookings = Array.isArray(listed) ? listed : listed.bookings ?? listed.data ?? [];
   results.push({ name: "housing booking visible", passed: Boolean(housingBookingId && listedBookings.some((item) => (item.id ?? item.booking_id) === housingBookingId)), status: housingBookingId ? 200 : 401, error: housingBookingId ? null : "Booking was not created because Provider rejected the Customer JWT" });
   if (housingBookingId) record("housing booking cancel", await call(providerBase, providerKey, "POST", "/cancel-booking", { booking_id: housingBookingId, reason: "Limpieza E2E" }, first.token));
@@ -138,7 +136,7 @@ if (provider?.id && serviceId) {
   serviceBookingId = (bookingPayload.booking ?? bookingPayload.reservation ?? bookingPayload).id;
   if (serviceBookingId) {
     observe("booking chat open", await call(providerBase, providerKey, "POST", "/get-or-create-booking-chat", { booking_id: serviceBookingId }, first.token));
-    observe("booking chat send", await call(providerBase, providerKey, "POST", "/send-chat-message", { booking_id: serviceBookingId, text: "Mensaje E2E de cliente" }, first.token));
+    observe("booking chat send", await call(providerBase, providerKey, "POST", "/send-chat-message", { booking_id: serviceBookingId, body: "Mensaje E2E de cliente" }, first.token));
     observe("booking chat list", await call(providerBase, providerKey, "GET", `/get-chat-messages?booking_id=${serviceBookingId}`, undefined, first.token));
     record("service booking cancel", await call(customerBase, customerKey, "POST", `/bookings/${serviceBookingId}/cancel`, { reason: "Limpieza E2E" }, first.token), [200, 201, 204]);
   }

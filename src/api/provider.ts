@@ -589,7 +589,7 @@ export async function sendChatMessage({
 }) {
   const response = await apiRequest<ChatMessage | ChatMessageResponse>("/send-chat-message", {
     method: "POST",
-    body: { booking_id: bookingId, text },
+    body: { booking_id: bookingId, body: text },
     accessToken
   });
 

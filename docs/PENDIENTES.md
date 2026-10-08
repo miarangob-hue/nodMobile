@@ -1,12 +1,10 @@
 # Pendientes de NOD Mobile
 
-Última actualización: 5 de octubre de 2026. Versión móvil: 1.0.26.
+Última actualización: 7 de octubre de 2026. Versión móvil: 1.0.26.
 
 ## Backend bloqueante
 
-- Corregir la autenticación cruzada definida por la especificación vigente: Housing consume Provider API directamente, pero `/create-booking-request` rechaza el JWT Customer con `401 Invalid or expired session` y rechaza la API key sola con `401 Bearer access token required`.
-- El ciclo Housing de Provider quedó certificado con JWT Provider (crear, listar, confirmar y cancelar). Falta aceptar Bearer Customer para que ese mismo ciclo funcione desde la app cliente.
-- Corregir la validación de sesión del chat de reservas cliente–proveedor. Las rutas existen en Provider API, pero rechazan el JWT Customer con `401 Invalid or expired session`. El chat de dating ya funciona.
+- Housing y chat ya validan JWT Customer junto con `x-api-key`. La app fue ajustada para inferir identidad al crear, enviar `customer_id` solo en la query de listado y usar `body` como contenido del mensaje.
 - Publicar el flujo dedicado de eliminación y anonimización para cuentas proveedor, equivalente al disponible para clientes.
 
 ## Notificaciones e integraciones
@@ -34,9 +32,9 @@
 
 ## Pruebas finales
 
-- Resultado E2E del 6 de octubre de 2026: 24/30 en la corrida integral de dos clientes, 8/8 en el ciclo interno Provider y 8/9 en Housing dedicado. Los bloqueos reproducibles son JWT Customer en Housing/chat y propagación Customer→Provider de reservas.
+- Resultado posterior a la resolución P0: 8/8 en Housing + chat con JWT Customer (crear, listar, abrir chat, enviar, recibir, marcar lectura y cancelar). Sigue pendiente resolver la propagación de reservas normales Customer→Provider.
 - Ejecutar regresión E2E en teléfonos físicos Android e iPhone: registro, teclado, permisos denegados, cámara, GPS, mapa, red intermitente, reservas, chat y push.
-- Certificar residencial completo cuando backend sincronice anfitriones: búsqueda, reserva, confirmación, chat, ingreso, salida, finalización y cancelación.
+- Completar una regresión residencial desde dispositivo físico, incluyendo UI, confirmación del proveedor, chat y cancelación.
 - Certificar pagos reales/sandbox, moderación administrativa y eliminación definitiva de cuentas.
 - Realizar pruebas de accesibilidad con tamaños de texto grandes y lectores de pantalla.
 

@@ -2770,7 +2770,7 @@ function BookingChatPanel({
               style={[styles.chatBubble, message.sender_id === providerId ? styles.chatBubbleOwn : styles.chatBubbleOther]}
             >
               <Text style={message.sender_id === providerId ? styles.chatTextOwn : styles.chatTextOther}>
-                {message.text ?? "Adjunto"}
+                {message.body ?? message.text ?? "Adjunto"}
               </Text>
             </View>
           ))}

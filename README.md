@@ -30,7 +30,7 @@ Android y iOS comparten el código funcional y la versión pública `1.0.26`. La
 - Wallet, pagos con Créditos NOD y flujo de Mercado Pago.
 - Solicitud autenticada de eliminación de cuentas de cliente.
 
-La validación local actual ejecuta **27 pruebas**. La certificación E2E más reciente se realizó el 6 de octubre de 2026 contra los backends desplegados.
+La validación local actual ejecuta **29 pruebas**. La certificación E2E más reciente se realizó contra los backends desplegados después de la resolución P0.
 
 ### Matriz E2E — 6 de octubre de 2026
 
@@ -43,22 +43,21 @@ La validación local actual ejecuta **27 pruebas**. La certificación E2E más r
 | Comunidad | Aprobado | Publicación `201`, like `200` y comentario `201` |
 | Catálogo y reserva normal | Parcial | Reserva y cancelación funcionan en Customer; la reserva no aparece en Provider |
 | Ciclo interno Provider | Aprobado | Crear, aceptar, iniciar, tracking, pausar, reanudar y completar funcionan |
-| Chat de reserva de servicio | Bloqueado | Provider rechaza JWT Customer con `401 Invalid or expired session` |
+| Chat de reserva de servicio | Aprobado tras corrección P0 | Customer crea/abre chat, envía con `body`, lista y marca lectura con `200/201` |
 | Housing: búsqueda y ficha | Aprobado | `/search-hosting` y `/get-hosting-host` responden `200` con disponibilidad |
-| Housing: reserva | Backend aprobado; móvil bloqueado | Con JWT Provider: crear `201`, listar `200`, confirmar `200` y cancelar `200`; con JWT Customer: `401` |
+| Housing: reserva | Aprobado tras corrección P0 | JWT Customer crea `201`, lista `200` y cancela `200`; el backend infiere la identidad Customer |
 | Wallet, compras y notificaciones Customer | Aprobado | Consultas autenticadas `200` |
 | Finanzas, documentos y reputación Provider | Aprobado | Balance, rendimiento, payouts, movimientos, bancos, impuestos, documentos y reseñas `200` |
 | Seguridad sin sesión | Aprobado | Customer y Provider rechazan recursos privados con `401` |
 | Páginas legales | Aprobado | Privacidad, términos y eliminación responden `200` |
 
-La corrida de dos perfiles obtuvo **24/30 comprobaciones**. Los seis fallos corresponden a propagación inmediata del candidato, reserva Housing con JWT Customer y las tres operaciones del chat de reservas. El ciclo Provider independiente aprobó **8/8 operaciones**. La prueba Housing dedicada aprobó **8/9**: búsqueda, ficha, disponibilidad, creación con JWT Provider, listado, confirmación y cancelación funcionaron; solo falló la creación con JWT Customer.
+La corrida inicial de dos perfiles obtuvo **24/30 comprobaciones**. Tras la resolución P0, la certificación dedicada Housing + chat con JWT Customer obtuvo **8/8**: creación `201`, listado `200`, apertura de chat `201`, envío `201`, recepción `200`, lectura `200` y cancelación `200`. El backend desplegado exige `customer_id` en la query de `/get-customer-bookings` y el campo `body` en `/send-chat-message`; la app usa esos contratos efectivos.
 
 ### Limitaciones actuales del backend
 
 - Housing usa Provider API como fuente única: `/search-hosting`, `/get-hosting-host`, `/create-booking-request` y `/get-customer-bookings`. Ya no depende de las tablas Housing de `nod-api`.
 - El proveedor `pabloxp@gmail.com` tiene un perfil residencial activo en Provider API (`NOD Residencial QA`, Providencia, $25.000 por noche).
-- La lectura Housing funciona, pero `POST /create-booking-request` exige Bearer y rechaza actualmente el JWT Customer con `401 Invalid or expired session`, pese a que la especificación vigente indica que debe aceptarlo.
-- El chat de reservas de servicios rechaza el JWT del cliente con `401 Invalid or expired session`. El chat de matches entre mascotas sí funciona.
+- Housing y chat de reservas ya aceptan conjuntamente `x-api-key` y JWT Customer. La identidad del cliente se obtiene del token y la app no envía `customer_id` al crear la reserva.
 - Las reservas normales creadas en Customer no aparecen en el listado Provider, aunque el ciclo creado directamente dentro de Provider funciona completo.
 - FCM/APNs, pagos, payouts y eliminación definitiva de proveedores requieren certificación en entornos productivos o sandbox.
 
@@ -68,8 +67,8 @@ La corrida de dos perfiles obtuvo **24/30 comprobaciones**. Los seis fallos corr
 
 - [x] Migrar búsqueda, ficha, creación y listado Housing directamente a Provider API.
 - [x] Certificar el ciclo backend Housing: búsqueda, detalle, disponibilidad, creación, listado, confirmación y cancelación.
-- [ ] Corregir Provider API para aceptar el JWT Customer en `/create-booking-request` y `/cancel-booking`, según la especificación vigente.
-- [ ] Permitir que el chat de reservas valide tanto JWT de cliente como JWT de proveedor, o publicar rutas equivalentes en `nod-api`.
+- [x] Validar JWT Customer en `/create-booking-request` y `/cancel-booking` sin confiar en `customer_id` del body.
+- [x] Habilitar chat de reservas para Customer: crear, enviar, listar y marcar lectura.
 - [ ] Hacer visible en Provider la misma reserva normal creada por Customer, conservando un único `booking_id`.
 - [ ] Validar cobertura, disponibilidad, servicio y propiedad de recursos al crear/aceptar reservas.
 - [ ] Publicar eliminación y anonimización de cuentas proveedor.
