@@ -38,7 +38,7 @@ La validación local actual ejecuta **33 pruebas**. La certificación E2E más r
 |---|---|---|
 | Login Customer y Provider | Aprobado | Ambas sesiones respondieron `200` |
 | Perfil, mascotas y ficha médica | Aprobado | Lectura autenticada `200` |
-| Dating y match mutuo | Aprobado con requisito | Discovery omite perfiles sin foto principal; likes mutuos crean match y chat funciona |
+| Dating y match mutuo | Aprobado | Dos perfiles nuevos completaron Discovery, likes mutuos, match y chat; el perfil histórico QA fue reparado y Discovery volvió a responder `200` |
 | Chat de match entre mascotas | Aprobado | Mensaje creado `201` y recibido por el segundo perfil `200` |
 | Comunidad | Aprobado | Publicación `201`, like `200` y comentario `201` |
 | Catálogo y reserva normal | Aprobado | Creación, listado, chat y cancelación usan Provider API como fuente única |
@@ -53,7 +53,13 @@ La validación local actual ejecuta **33 pruebas**. La certificación E2E más r
 | Seguridad sin sesión | Aprobado | Customer y Provider rechazan recursos privados con `401` |
 | Páginas legales | Aprobado | Privacidad, términos y eliminación responden `200` |
 
-La recertificación posterior a la centralización obtuvo **38/38 comprobaciones**: Discovery con foto principal, match y chat, comunidad, reservas normales y Housing funcionan de extremo a extremo. Ambos tipos de reserva crean, abren chat, envían/listan mensajes y cancelan correctamente en Provider API. El backend exige subir la foto social mediante `/pets/:id/social-profile/photos`, `customer_id` en la query de `/get-customer-bookings` y el campo `body` en `/send-chat-message`; la app y la suite usan esos contratos efectivos.
+La recertificación del 13 de octubre de 2026 obtuvo **38/38 comprobaciones** con dos perfiles nuevos: Discovery con foto principal, match y chat, comunidad, reservas normales y Housing funcionan de extremo a extremo. Ambos tipos de reserva crean, abren chat, envían/listan mensajes y cancelan correctamente en Provider API. El ciclo operativo adicional aprobó creación, visibilidad, aceptación, inicio, GPS, pausa, reanudación, finalización, detalle, timeline, ETA, ruta y fotos. El backend exige subir la foto social mediante `/pets/:id/social-profile/photos`, `customer_id` en la query de `/get-customer-bookings` y el campo `body` en `/send-chat-message`; la app y la suite usan esos contratos efectivos.
+
+La auditoría general obtuvo **74/79 contratos respondiendo**. Los cinco ausentes son las rutas Housing antiguas de Customer API (`/hosting/*`), retiradas intencionalmente después de centralizar el flujo en Provider API; no son dependencias de Mobile. La mascota del perfil histórico QA no tenía perfil social publicado: se reconstruyó el perfil, se agregó foto principal y `GET /discovery/candidates` pasó de `404` a `200` con candidatos.
+
+El smoke Android instaló `NOD-android-v28.apk` en el AVD `NOD_Pixel`: `MainActivity`, onboarding, Login, selector de rol, formulario, teclado y botón Google se renderizaron correctamente. Al pulsar Google, la app informa correctamente que falta `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`; no es posible completar OAuth ni push hasta cargar Client IDs, proyecto EAS y archivos FCM/APNs.
+
+Los exports JavaScript Android e iOS terminaron correctamente. Esto valida el bundle compartido, pero no sustituye un IPA firmado ni pruebas iOS en simulador/dispositivo. Moderación rechazó correctamente al usuario Customer con `403`; falta una sesión que tenga `admin:moderation` para certificar las acciones administrativas.
 
 La regresión autenticada Customer → Provider también confirmó creación, visibilidad inmediata, aceptación, inicio, tracking, pausa, reanudación, finalización y consulta posterior sobre el mismo `booking_id`. El export Android de producción local terminó correctamente. La ruta documentada `/pets/:id/social-discovery` no está publicada; Mobile usa el contrato real `GET /discovery/candidates`.
 
@@ -90,6 +96,7 @@ La certificación de pagos confirmó que `nod-api` reconoce las reservas de Prov
 - [ ] Completar Mercado Pago sandbox con tarjeta de prueba hasta webhook `paid`, acreditar Créditos NOD, comprobar débito idempotente con saldo, reembolsos y payouts.
 - [ ] Ejecutar regresión E2E en dispositivos físicos: permisos, cámara, GPS, mapas, teclado y red intermitente.
 - [ ] Probar moderación comunitaria con un usuario que tenga `admin:moderation`.
+- [x] Reparar el perfil social histórico de QA y confirmar `/discovery/candidates` con respuesta `200`.
 - [x] Probar creación, consulta y cancelación reversible de eliminación de cliente (`202`, `200`, luego `404` sin solicitud activa).
 - [ ] Probar la ejecución definitiva de eliminación y anonimización de cliente en una cuenta desechable.
 - [ ] Repetir Google Login, push, pagos y permisos en dispositivos físicos con credenciales de producción/sandbox; no son certificables únicamente por HTTP.

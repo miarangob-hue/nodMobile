@@ -7,7 +7,8 @@
 - Housing y chat ya validan JWT Customer junto con `x-api-key`. La app fue ajustada para inferir identidad al crear, enviar `customer_id` solo en la query de listado y usar `body` como contenido del mensaje.
 - Reservas normales y Housing ya usan Provider como fuente única; creación, listado, chat y cancelación fueron recertificados E2E.
 - Corregir `/create-booking-request`: actualmente acepta un `service_id` UUID inexistente con `201`. Debe validar existencia, vigencia y asociación del servicio al proveedor.
-- Persistir dirección, comuna, ciudad, latitud y longitud. Provider acepta esos campos pero los omite de la respuesta y del listado; Mobile conserva temporalmente metadatos de presentación en `notes`.
+- Validar cobertura geográfica: una reserva técnica en Antártica fue aceptada con `201` por un proveedor de Providencia.
+- Persistir dirección, comuna, ciudad, latitud y longitud. Provider acepta esos campos pero devuelve los cinco como `null` tanto al crear como al listar; Mobile conserva temporalmente metadatos de presentación en `notes`.
 - La validación de fechas y propiedad sí está activa: fecha pasada `400`, horario ocupado `409` y cancelación de reserva ajena `403`.
 - Publicar el flujo dedicado de eliminación y anonimización para cuentas proveedor, equivalente al disponible para clientes.
 
@@ -23,6 +24,7 @@
 - Persistir puntos, niveles y medallas en backend para que no puedan alterarse desde el teléfono y sobrevivan reinstalaciones.
 - Implementar ranking comunitario global, por comuna y período.
 - Probar moderación completa con una sesión que tenga permiso `admin:moderation`.
+- El control de acceso fue comprobado: una sesión Customer recibe `403 forbidden`; no hay credenciales administrativas configuradas para probar resolución, suspensión y restauración.
 
 ## Publicación en tiendas
 
@@ -37,13 +39,18 @@
 
 ## Pruebas finales
 
-- Resultado funcional actual: **38/38** en registro, mascotas, Discovery, match/chat, comunidad, reserva normal, Housing y chats. La propagación Customer→Provider ya no aplica: Mobile crea directamente en Provider.
+- Resultado funcional actual: **38/38** con dos perfiles nuevos en registro, mascotas, Discovery, match/chat, comunidad, reserva normal, Housing y chats. Las reservas QA de servicio y Housing fueron canceladas al finalizar.
+- Ciclo Provider aprobado: crear, visualizar, aceptar, iniciar, registrar GPS, pausar, reanudar, completar y consultar detalle, timeline, ETA, ruta y fotos.
+- Auditoría de contratos: **74/79** responden. Los cinco ausentes corresponden a `/hosting/*` de Customer API, retirados y reemplazados por las rutas Provider que Mobile utiliza y que pasaron E2E.
+- Perfil histórico QA reparado: faltaba publicar el perfil social; después de crear perfil y foto principal, Discovery respondió `200` con cinco candidatos.
 - Pagos Provider: consulta inicial `unpaid`, checkout sandbox `201`, consulta posterior `pending`; falta completar pago sandbox y comprobar `paid` por webhook.
 - Eliminación Customer reversible aprobada: crear, consultar y cancelar. Falta ejecutar eliminación/anonimización definitiva en una cuenta desechable.
 - Ejecutar regresión E2E en teléfonos físicos Android e iPhone: registro, teclado, permisos denegados, cámara, GPS, mapa, red intermitente, reservas, chat y push.
 - Completar una regresión residencial desde dispositivo físico, incluyendo UI, confirmación del proveedor, chat y cancelación.
 - Certificar pago sandbox final, moderación administrativa y eliminación definitiva de cuentas.
 - Realizar pruebas de accesibilidad con tamaños de texto grandes y lectores de pantalla.
+- Smoke Android aprobado en `NOD_Pixel`: instalación de APK v28, arranque, onboarding, Login, selector de rol, teclado y formulario. Google muestra el bloqueo esperado por Client ID ausente.
+- Exports JavaScript Android e iOS aprobados; siguen pendientes IPA firmado y pruebas iOS nativas por ausencia de certificados, provisioning y OAuth/APNs.
 
 ## Mejoras no bloqueantes
 

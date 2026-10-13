@@ -17,9 +17,10 @@
 - [x] Ejecutar prueba de integración de reserva, aceptación, inicio, tracking, pausa, reanudación y cierre en Provider.
 - [x] Certificar el ciclo interno Provider directo: crear, aceptar, iniciar, tracking, pausar, reanudar y completar.
 - [x] Unificar reservas normales en Provider API y certificar chat/cancelación sobre el mismo `booking_id`.
-- [ ] Incorporar pruebas E2E Android/iOS para teclado, ubicación, mapa y formularios.
+- [ ] Completar pruebas E2E Android/iOS para ubicación, mapa, permisos y formularios; Android ya aprobó instalación, arranque, render de Login y entrada con teclado en emulador.
 - [x] Agregar CI para ejecutar TypeScript, pruebas y export Android de validación en cada pull request.
 - [ ] Probar permisos denegados y conectividad intermitente en dispositivos reales.
+- [x] Reparar el perfil social histórico asociado al cliente QA: perfil y foto principal publicados; `/discovery/candidates` volvió a responder `200`.
 
 ## Producto
 
