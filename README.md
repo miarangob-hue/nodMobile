@@ -77,7 +77,9 @@ La certificación de pagos confirmó que `nod-api` reconoce las reservas de Prov
 - [x] Validar JWT Customer en `/create-booking-request` y `/cancel-booking` sin confiar en `customer_id` del body.
 - [x] Habilitar chat de reservas para Customer: crear, enviar, listar y marcar lectura.
 - [x] Crear y operar reservas normales directamente en Provider, conservando un único `booking_id`.
-- [ ] Validar cobertura, disponibilidad, servicio y propiedad de recursos al crear/aceptar reservas.
+- [x] Validar propiedad, fechas futuras y conflictos de disponibilidad al crear/cancelar reservas.
+- [ ] Rechazar `service_id` inexistentes y validar que el servicio pertenezca realmente al proveedor; QA confirmó que actualmente un UUID inexistente puede crear una reserva `201`.
+- [ ] Validar cobertura geográfica en backend y persistir dirección, comuna, ciudad y coordenadas; Provider actualmente ignora esos campos estructurados.
 - [ ] Publicar eliminación y anonimización de cuentas proveedor.
 
 ### P1 — Integraciones y pruebas
@@ -85,10 +87,11 @@ La certificación de pagos confirmó que `nod-api` reconoce las reservas de Prov
 - [ ] Configurar los Client IDs OAuth definitivos y probar Google Login en dispositivos Android/iOS reales.
 - [ ] Vincular el proyecto EAS definitivo y configurar FCM para Android y APNs para iOS.
 - [ ] Probar notificaciones push externas en teléfonos físicos.
-- [ ] Certificar Mercado Pago, reembolsos, Créditos NOD y payouts en sandbox.
+- [ ] Completar Mercado Pago sandbox con tarjeta de prueba hasta webhook `paid`, acreditar Créditos NOD, comprobar débito idempotente con saldo, reembolsos y payouts.
 - [ ] Ejecutar regresión E2E en dispositivos físicos: permisos, cámara, GPS, mapas, teclado y red intermitente.
 - [ ] Probar moderación comunitaria con un usuario que tenga `admin:moderation`.
-- [ ] Probar el flujo definitivo de eliminación y anonimización de clientes.
+- [x] Probar creación, consulta y cancelación reversible de eliminación de cliente (`202`, `200`, luego `404` sin solicitud activa).
+- [ ] Probar la ejecución definitiva de eliminación y anonimización de cliente en una cuenta desechable.
 - [ ] Repetir Google Login, push, pagos y permisos en dispositivos físicos con credenciales de producción/sandbox; no son certificables únicamente por HTTP.
 
 ### P2 — Producto y publicación
@@ -99,7 +102,7 @@ La certificación de pagos confirmó que `nod-api` reconoce las reservas de Prov
 - [ ] Completar accesibilidad y pruebas con lector de pantalla y texto ampliado.
 - [ ] Configurar firma Android de producción y generar el AAB de Google Play.
 - [ ] Configurar certificados y perfiles de distribución iOS.
-- [ ] Completar revisión jurídica y publicar privacidad, términos y eliminación de cuenta.
+- [ ] Completar revisión jurídica e identidad legal de privacidad, términos y eliminación; las páginas públicas ya responden `200`.
 - [ ] Preparar capturas, fichas de tienda, Data Safety y Privacy Nutrition Labels.
 
 El detalle ampliado se mantiene en [`TODO.md`](TODO.md) y [`docs/PENDIENTES.md`](docs/PENDIENTES.md).

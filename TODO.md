@@ -5,8 +5,10 @@
 - [x] Crear, listar y cancelar reservas directamente en Provider como fuente única de datos.
 - [x] Verificar aceptación y ciclo completo en Provider sobre el mismo `booking_id`.
 - [x] Integrar pagos Customer con reservas Provider y alinear Checkout Pro, estado consolidado e idempotencia de Créditos NOD.
-- [ ] Validar cobertura, servicio y disponibilidad nuevamente en backend al crear y aceptar una reserva.
-- [ ] Confirmar en backend la persistencia de comuna, ciudad, latitud y longitud que la app ya envía como campos estructurados.
+- [x] Validar propiedad, fechas futuras y conflictos de disponibilidad: otro cliente recibe `403`, fechas pasadas `400` y horario ocupado `409`.
+- [ ] Rechazar servicios inexistentes o no asociados al proveedor; `/create-booking-request` aceptó un UUID inexistente con `201` en QA.
+- [ ] Validar cobertura geográfica al crear/aceptar una reserva.
+- [ ] Persistir comuna, ciudad, latitud y longitud: Provider acepta la petición pero omite actualmente esos campos en creación y listado.
 - [ ] Sustituir las claves y credenciales de desarrollo antes de publicar en tiendas.
 
 ## Calidad y pruebas
@@ -37,7 +39,8 @@
 - [x] Incorporar borradores de privacidad, términos y solicitud autenticada de eliminación de cuenta.
 - [ ] Revisión jurídica, identidad legal completa y publicación web de privacidad, términos y eliminación.
 - [x] Integrar en cliente crear, consultar y cancelar solicitudes de eliminación mediante la API dedicada.
-- [ ] Probar eliminación de cliente E2E y publicar el equivalente dedicado para cuentas proveedor.
+- [x] Probar E2E reversible de eliminación Customer: crear `202`, consultar `200`, cancelar `200` y confirmar ausencia `404`.
+- [ ] Probar ejecución definitiva y anonimización en una cuenta Customer desechable, y publicar el equivalente para Provider.
 
 ## Publicación
 
