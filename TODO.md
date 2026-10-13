@@ -4,6 +4,7 @@
 
 - [x] Crear, listar y cancelar reservas directamente en Provider como fuente única de datos.
 - [x] Verificar aceptación y ciclo completo en Provider sobre el mismo `booking_id`.
+- [x] Integrar pagos Customer con reservas Provider y alinear Checkout Pro, estado consolidado e idempotencia de Créditos NOD.
 - [ ] Validar cobertura, servicio y disponibilidad nuevamente en backend al crear y aceptar una reserva.
 - [ ] Confirmar en backend la persistencia de comuna, ciudad, latitud y longitud que la app ya envía como campos estructurados.
 - [ ] Sustituir las claves y credenciales de desarrollo antes de publicar en tiendas.

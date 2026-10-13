@@ -13,6 +13,7 @@ export function getFriendlyError(error: unknown, fallback = "Ocurrió un problem
     }
     if (error.status === 400) return getApiMessage(error) ?? "Revisa los datos ingresados.";
     if (error.status === 401) return "Correo o contraseña incorrectos.";
+    if (error.status === 402) return apiMessage ?? "No tienes suficientes Créditos NOD para completar el pago.";
     if (error.status === 403) return "No tienes permiso para realizar esta acción.";
     if (error.status === 404) return "No encontramos la información solicitada.";
     if (error.status === 409) return getApiMessage(error) ?? "Estos datos ya están registrados.";

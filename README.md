@@ -30,9 +30,9 @@ Android y iOS comparten el código funcional y la versión pública `1.0.26`. La
 - Wallet, pagos con Créditos NOD y flujo de Mercado Pago.
 - Solicitud autenticada de eliminación de cuentas de cliente.
 
-La validación local actual ejecuta **29 pruebas**. La certificación E2E más reciente se realizó el 8 de octubre de 2026 contra los backends desplegados después de la centralización de reservas.
+La validación local actual ejecuta **33 pruebas**. La certificación E2E más reciente se realizó contra los backends desplegados después de la centralización de reservas y la integración de pagos con `provider_bookings`.
 
-### Matriz E2E — 8 de octubre de 2026
+### Matriz E2E — 13 de octubre de 2026
 
 | Área | Resultado | Evidencia |
 |---|---|---|
@@ -47,6 +47,8 @@ La validación local actual ejecuta **29 pruebas**. La certificación E2E más r
 | Housing: búsqueda y ficha | Aprobado | `/search-hosting` y `/get-hosting-host` responden `200` con disponibilidad |
 | Housing: reserva | Aprobado tras corrección P0 | JWT Customer crea `201`, lista `200` y cancela `200`; el backend infiere la identidad Customer |
 | Wallet, compras y notificaciones Customer | Aprobado | Consultas autenticadas `200` |
+| Pagos Provider + Mercado Pago | Aprobado hasta checkout | Reserva Provider reconocida; estado `unpaid` → checkout `201` → `pending`; falta completar una tarjeta sandbox y validar webhook `paid` |
+| Créditos NOD | Aprobado sin saldo | Wallet y paquetes `200`; débito sin saldo responde `402 insufficient_credits`; falta certificar débito exitoso e idempotente con saldo |
 | Finanzas, documentos y reputación Provider | Aprobado | Balance, rendimiento, payouts, movimientos, bancos, impuestos, documentos y reseñas `200` |
 | Seguridad sin sesión | Aprobado | Customer y Provider rechazan recursos privados con `401` |
 | Páginas legales | Aprobado | Privacidad, términos y eliminación responden `200` |
@@ -55,13 +57,16 @@ La recertificación posterior a la centralización obtuvo **38/38 comprobaciones
 
 La regresión autenticada Customer → Provider también confirmó creación, visibilidad inmediata, aceptación, inicio, tracking, pausa, reanudación, finalización y consulta posterior sobre el mismo `booking_id`. El export Android de producción local terminó correctamente. La ruta documentada `/pets/:id/social-discovery` no está publicada; Mobile usa el contrato real `GET /discovery/candidates`.
 
+La certificación de pagos confirmó que `nod-api` reconoce las reservas de Provider. `GET /payments/bookings/:id` devolvió `unpaid`, `POST /payments/checkout` creó una preferencia sandbox con `init_point` y `sandbox_init_point`, y la consulta posterior devolvió `pending`. `POST /wallet/topups` también creó una preferencia sandbox `201`. Mobile normaliza estos contratos y envía `idempotency_key` al pagar con créditos. No se realizó ningún cargo real; queda pendiente completar una tarjeta sandbox para verificar webhook, transición a `paid`, acreditación de créditos y reembolsos.
+
 ### Limitaciones actuales del backend
 
 - Todas las reservas usan Provider API como fuente única: `/create-booking-request`, `/get-customer-bookings` y `/cancel-booking`; Housing agrega `/search-hosting` y `/get-hosting-host`.
 - El proveedor `pabloxp@gmail.com` tiene un perfil residencial activo en Provider API (`NOD Residencial QA`, Providencia, $25.000 por noche).
 - Housing y chat de reservas ya aceptan conjuntamente `x-api-key` y JWT Customer. La identidad del cliente se obtiene del token y la app no envía `customer_id` al crear la reserva.
 - Customer API retiró `GET/POST /bookings` y `/bookings/:id/cancel`; la app ya no depende de esas rutas.
-- FCM/APNs, pagos, payouts y eliminación definitiva de proveedores requieren certificación en entornos productivos o sandbox.
+- Payments ya consulta las reservas de Provider: Mobile normaliza `init_point`, `sandbox_init_point` y `payment_status`, y usa idempotencia al pagar con Créditos NOD.
+- FCM/APNs, confirmación final de pagos sandbox, payouts y eliminación definitiva de proveedores requieren certificación con servicios externos.
 
 ## TO-DO
 

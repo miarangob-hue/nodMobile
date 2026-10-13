@@ -3,6 +3,7 @@ import { createBooking, getCustomerBookings } from "./customer";
 import { getCommunityFeed } from "./community";
 import { createHostingBooking, searchHosting } from "./hosting";
 import { getProviderBalance, sendChatMessage } from "./provider";
+import { createMercadoPagoCheckout, createWalletTopUp, getBookingPayment, payBookingWithNodCredits } from "./payments";
 
 function mockJsonResponse(body: unknown) {
   const fetchMock = vi.fn().mockResolvedValue({
@@ -111,5 +112,49 @@ describe("session-scoped backend contracts", () => {
 
     const [, options] = fetchMock.mock.calls[0];
     expect(JSON.parse(options.body)).toEqual({ booking_id: "booking-id", body: "Hola" });
+  });
+
+  it("normalizes Mercado Pago init points to the mobile checkout contract", async () => {
+    mockJsonResponse({
+      payment: { id: "payment-id", booking_id: "booking-id", status: "pending" },
+      preference_id: "preference-id",
+      init_point: "https://mercadopago.example/checkout",
+      sandbox_init_point: "https://sandbox.mercadopago.example/checkout"
+    });
+
+    const checkout = await createMercadoPagoCheckout({ bookingId: "booking-id", accessToken: "customer-token" });
+
+    expect(checkout.checkout_url).toBe("https://mercadopago.example/checkout");
+    expect(checkout.sandbox_checkout_url).toBe("https://sandbox.mercadopago.example/checkout");
+    expect(checkout.payment_id).toBe("payment-id");
+    expect(checkout.status).toBe("pending");
+  });
+
+  it("normalizes wallet top-up init points", async () => {
+    mockJsonResponse({ init_point: "https://mercadopago.example/topup", sandbox_init_point: "https://sandbox.mercadopago.example/topup" });
+
+    const checkout = await createWalletTopUp({ packageId: "package-id", accessToken: "customer-token" });
+
+    expect(checkout.checkout_url).toContain("/topup");
+    expect(checkout.sandbox_checkout_url).toContain("/topup");
+  });
+
+  it("normalizes consolidated payment_status responses", async () => {
+    mockJsonResponse({ booking_id: "booking-id", price_amount: 25000, currency: "CLP", payment_status: "paid", payment: { method: "mercadopago" } });
+
+    const payment = await getBookingPayment({ bookingId: "booking-id", accessToken: "customer-token" });
+
+    expect(payment.status).toBe("paid");
+    expect(payment.method).toBe("mercadopago");
+    expect(payment.gross_amount).toBe(25000);
+  });
+
+  it("sends a stable idempotency key when paying with NOD credits", async () => {
+    const fetchMock = mockJsonResponse({ status: "paid" });
+
+    await payBookingWithNodCredits({ bookingId: "booking-id", accessToken: "customer-token" });
+
+    const [, options] = fetchMock.mock.calls[0];
+    expect(JSON.parse(options.body)).toEqual({ booking_id: "booking-id", idempotency_key: "mobile-booking-booking-id" });
   });
 });

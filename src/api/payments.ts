@@ -16,6 +16,18 @@ export type PaymentCheckout = {
   simulated?: boolean;
 };
 
+type PaymentCheckoutApiResponse = Partial<PaymentCheckout> & {
+  init_point?: string | null;
+  sandbox_init_point?: string | null;
+  payment?: {
+    id?: string | null;
+    booking_id?: string | null;
+    status?: string | null;
+    amount?: number | null;
+    currency?: string | null;
+  } | null;
+};
+
 export type BookingPayment = {
   id?: string | null;
   booking_id: string;
@@ -26,6 +38,12 @@ export type BookingPayment = {
   provider_net_amount?: number | null;
   currency?: string | null;
   paid_at?: string | null;
+};
+
+type BookingPaymentApiResponse = Partial<BookingPayment> & {
+  payment_status?: string | null;
+  price_amount?: number | null;
+  payment?: (Partial<BookingPayment> & { payment_status?: string | null }) | null;
 };
 
 export type NodWallet = {
@@ -82,36 +100,67 @@ export async function getNodWallet(accessToken?: string | null): Promise<WalletS
   };
 }
 
-export function createWalletTopUp({ accessToken, packageId }: { accessToken?: string | null; packageId: string }) {
-  return apiRequest<PaymentCheckout>("/wallet/topups", {
+export async function createWalletTopUp({ accessToken, packageId }: { accessToken?: string | null; packageId: string }) {
+  const response = await apiRequest<PaymentCheckoutApiResponse>("/wallet/topups", {
     method: "POST",
     body: { package_id: packageId },
     apiKeyKind: "customer",
     accessToken
   });
+  return normalizeCheckout(response);
 }
 
-export function payBookingWithNodCredits({ accessToken, bookingId }: { accessToken?: string | null; bookingId: string }) {
-  return apiRequest<{ ok: boolean; booking_id: string; amount_debited: number; remaining_balance: number; status: string }>("/wallet/payments", {
+export function payBookingWithNodCredits({ accessToken, bookingId, idempotencyKey }: { accessToken?: string | null; bookingId: string; idempotencyKey?: string }) {
+  return apiRequest<{ ok?: boolean; booking_id?: string; amount_debited?: number; remaining_balance?: number; status?: string; replayed?: boolean; payment?: unknown; balance?: unknown }>("/wallet/payments", {
+    method: "POST",
+    body: { booking_id: bookingId, idempotency_key: idempotencyKey ?? `mobile-booking-${bookingId}` },
+    apiKeyKind: "customer",
+    accessToken
+  });
+}
+
+export async function createMercadoPagoCheckout({ accessToken, bookingId }: { accessToken?: string | null; bookingId: string }) {
+  const response = await apiRequest<PaymentCheckoutApiResponse>("/payments/checkout", {
     method: "POST",
     body: { booking_id: bookingId },
     apiKeyKind: "customer",
     accessToken
   });
+  return normalizeCheckout(response);
 }
 
-export function createMercadoPagoCheckout({ accessToken, bookingId }: { accessToken?: string | null; bookingId: string }) {
-  return apiRequest<PaymentCheckout>("/payments/checkout", {
-    method: "POST",
-    body: { booking_id: bookingId },
+export async function getBookingPayment({ accessToken, bookingId }: { accessToken?: string | null; bookingId: string }) {
+  const response = await apiRequest<BookingPaymentApiResponse>(`/payments/bookings/${bookingId}`, {
     apiKeyKind: "customer",
     accessToken
   });
+  const payment = response.payment ?? {};
+  return {
+    ...payment,
+    ...response,
+    id: response.id ?? payment.id ?? null,
+    booking_id: response.booking_id ?? payment.booking_id ?? bookingId,
+    status: response.payment_status ?? response.status ?? payment.payment_status ?? payment.status ?? "unpaid",
+    method: response.method ?? payment.method ?? null,
+    gross_amount: response.gross_amount ?? payment.gross_amount ?? response.price_amount ?? null,
+    platform_fee: response.platform_fee ?? payment.platform_fee ?? null,
+    provider_net_amount: response.provider_net_amount ?? payment.provider_net_amount ?? null,
+    currency: response.currency ?? payment.currency ?? null,
+    paid_at: response.paid_at ?? payment.paid_at ?? null
+  } satisfies BookingPayment;
 }
 
-export function getBookingPayment({ accessToken, bookingId }: { accessToken?: string | null; bookingId: string }) {
-  return apiRequest<BookingPayment>(`/payments/bookings/${bookingId}`, {
-    apiKeyKind: "customer",
-    accessToken
-  });
+function normalizeCheckout(response: PaymentCheckoutApiResponse): PaymentCheckout {
+  const payment = response.payment ?? {};
+  return {
+    ...response,
+    payment_id: response.payment_id ?? payment.id ?? null,
+    booking_id: response.booking_id ?? payment.booking_id ?? null,
+    preference_id: response.preference_id ?? null,
+    checkout_url: response.checkout_url ?? response.init_point ?? "",
+    sandbox_checkout_url: response.sandbox_checkout_url ?? response.sandbox_init_point ?? null,
+    status: response.status ?? payment.status ?? "pending",
+    amount: response.amount ?? payment.amount ?? null,
+    currency: response.currency ?? payment.currency ?? null
+  };
 }
