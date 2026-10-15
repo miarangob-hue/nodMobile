@@ -8,10 +8,10 @@ Aplicación móvil de NOD para clientes y proveedores de servicios de mascotas. 
 
 | Plataforma | Versión | Build | Identificador | Estado |
 |---|---:|---:|---|---|
-| Android | `1.0.27` | `versionCode 29` | `com.nod.mobile` | APK release de QA generado, instalado y verificado |
-| iOS | `1.0.27` | `buildNumber 1` | `com.nod.mobile` | Configurado en Expo; IPA y distribución pendientes |
+| Android | `1.0.29` | `versionCode 29` | `com.nod.mobile` | APK release de QA generado, instalado y verificado |
+| iOS | `1.0.29` | `buildNumber 1` | `com.nod.mobile` | Configurado en Expo; IPA y distribución pendientes |
 
-Android y iOS comparten el código funcional y la versión pública `1.0.27`. La compilación Android fue validada localmente; la versión iOS todavía debe compilarse y probarse en Xcode/EAS con certificados, provisioning profile, APNs y credenciales OAuth de iOS.
+Android y iOS comparten el código funcional y la versión pública `1.0.29`. La compilación Android fue validada localmente; la versión iOS todavía debe compilarse y probarse en Xcode/EAS con certificados, provisioning profile, APNs y credenciales OAuth de iOS.
 
 ## Estado funcional
 
@@ -58,7 +58,7 @@ La certificación del 13 de octubre obtuvo **38/38 comprobaciones**. Tras el des
 
 La auditoría general repetida el 14 de octubre obtuvo **74/79 contratos respondiendo**. Los cinco ausentes son las rutas Housing antiguas de Customer API (`/hosting/*`), retiradas intencionalmente después de centralizar el flujo en Provider API; no son dependencias de Mobile. Una regresión autenticada adicional aprobó **15/15** lecturas de Customer y Provider. La mascota del perfil histórico QA no tenía perfil social publicado: se reconstruyó el perfil, se agregó foto principal y `GET /discovery/candidates` pasó de `404` a `200` con candidatos.
 
-El smoke Android instaló `NOD-1.0.27-android-v29.apk` en el AVD `NOD_Pixel`, confirmó `versionName 1.0.27`, `versionCode 29` y el arranque del proceso `com.nod.mobile`. La revisión visual anterior también aprobó `MainActivity`, onboarding, Login, selector de rol, formulario, teclado y botón Google. Al pulsar Google, la app informa correctamente que falta `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`; no es posible completar OAuth ni push hasta cargar Client IDs, proyecto EAS y archivos FCM/APNs.
+El smoke Android instaló `NOD-1.0.29-android-v29.apk` en el AVD `NOD_Pixel`, confirmó `versionName 1.0.29`, `versionCode 29` y el arranque del proceso `com.nod.mobile`. La revisión visual anterior también aprobó `MainActivity`, onboarding, Login, selector de rol, formulario, teclado y botón Google. Al pulsar Google, la app informa correctamente que falta `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`; no es posible completar OAuth ni push hasta cargar Client IDs, proyecto EAS y archivos FCM/APNs.
 
 Los exports JavaScript Android e iOS terminaron correctamente. Esto valida el bundle compartido, pero no sustituye un IPA firmado ni pruebas iOS en simulador/dispositivo. Moderación rechazó correctamente al usuario Customer con `403`; falta una sesión que tenga `admin:moderation` para certificar las acciones administrativas.
 
@@ -184,7 +184,7 @@ Para publicación se deben configurar `EAS_PROJECT_ID`, Firebase/Google Services
 La configuración iOS actual usa:
 
 - Bundle identifier: `com.nod.mobile`.
-- Versión: `1.0.27`.
+- Versión: `1.0.29`.
 - Build number: `1`.
 - Compatibilidad con iPhone y iPad.
 - Permisos declarados para cámara y ubicación.

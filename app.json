@@ -2,7 +2,7 @@
   "expo": {
     "name": "NOD",
     "slug": "nod-mobile",
-    "version": "1.0.27",
+    "version": "1.0.29",
     "orientation": "portrait",
     "scheme": "nod",
     "platforms": [
