@@ -1,6 +1,6 @@
 # Pendientes de NOD Mobile
 
-Última actualización: 14 de octubre de 2026. Versión móvil: 1.0.26 (`versionCode 28`).
+Última actualización: 14 de octubre de 2026. Versión móvil: 1.0.27 (`versionCode 29`).
 
 ## Backend bloqueante
 
@@ -55,7 +55,7 @@
 - Completar una regresión residencial desde dispositivo físico, incluyendo UI, confirmación del proveedor, chat y cancelación.
 - Certificar pago sandbox final, moderación administrativa y eliminación definitiva de cuentas.
 - Realizar pruebas de accesibilidad con tamaños de texto grandes y lectores de pantalla.
-- Smoke Android aprobado en `NOD_Pixel`: instalación de APK v28, arranque, onboarding, Login, selector de rol, teclado y formulario. Google muestra el bloqueo esperado por Client ID ausente.
+- Smoke Android v29 aprobado en `NOD_Pixel`: `NOD-1.0.27-android-v29.apk` se instaló, reportó `versionName 1.0.27`/`versionCode 29` y arrancó `com.nod.mobile`. Onboarding, Login, selector de rol, teclado y formulario ya tenían smoke visual aprobado; Google mantiene el bloqueo esperado por Client ID ausente.
 - Exports JavaScript Android e iOS aprobados; siguen pendientes IPA firmado y pruebas iOS nativas por ausencia de certificados, provisioning y OAuth/APNs.
 
 ## Mejoras no bloqueantes
