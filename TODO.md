@@ -6,9 +6,9 @@
 - [x] Verificar aceptación y ciclo completo en Provider sobre el mismo `booking_id`.
 - [x] Integrar pagos Customer con reservas Provider y alinear Checkout Pro, estado consolidado e idempotencia de Créditos NOD.
 - [x] Validar propiedad, fechas futuras y conflictos de disponibilidad: otro cliente recibe `403`, fechas pasadas `400` y horario ocupado `409`.
-- [ ] Rechazar servicios inexistentes o no asociados al proveedor; `/create-booking-request` aceptó un UUID inexistente con `201` en QA.
-- [ ] Validar cobertura geográfica al crear/aceptar una reserva.
-- [ ] Persistir comuna, ciudad, latitud y longitud: Provider acepta la petición pero omite actualmente esos campos en creación y listado.
+- [x] Rechazar servicios inexistentes o no asociados al proveedor; QA recertificado con `404 service_not_found`.
+- [x] Validar cobertura geográfica al crear una reserva; Antártica contra Providencia responde `422 out_of_coverage`.
+- [x] Persistir dirección, comuna, ciudad, latitud y longitud en creación y listados; Mobile envía `commune` y normaliza el objeto `location`.
 - [ ] Sustituir las claves y credenciales de desarrollo antes de publicar en tiendas.
 
 ## Calidad y pruebas
@@ -32,16 +32,20 @@
 - [x] Sincronizar spots personales con foto y GPS mediante GET/POST /spots.
 - [x] Agregar puntos, progreso y medallas derivadas en la experiencia Comunidad.
 - [x] Integrar feed comunitario global, publicaciones con foto, reacciones y comentarios mediante `/feed` y `/posts`.
-- [ ] Persistir logros/medallas en backend y agregar ranking comunitario; hoy el progreso se deriva de los spots sincronizados.
+- [x] Persistir puntos, niveles y medallas en backend e integrar perfil comunitario server-side.
+- [x] Integrar ranking comunitario global y por período; el contrato también admite filtro por comuna.
 - [x] Migrar Housing a Provider API como fuente única (`search-hosting`, `get-hosting-host`, `create-booking-request`, `get-customer-bookings`).
-- [x] Probar Housing backend E2E con JWT Provider: búsqueda, disponibilidad, creación, listado, confirmación y cancelación.
+- [ ] Recertificar Housing E2E: el despliegue del 14-10 mantiene búsqueda/detalle, pero `create-booking-request` rechaza el servicio anterior con `404` y `hosting_profile_id` con `422 out_of_coverage`.
+- [ ] Restaurar una asociación de servicio/precio para `pabloxp@gmail.com`; Provider devuelve actualmente cero precios y la validación estricta impide repetir con esa cuenta el ciclo operativo.
 - [x] Aceptar JWT Customer para crear y cancelar reservas Housing, infiriendo la identidad desde la sesión.
 - [x] Certificar chat de reservas Customer: crear/obtener, enviar, listar y marcar lectura.
 - [x] Incorporar borradores de privacidad, términos y solicitud autenticada de eliminación de cuenta.
 - [ ] Revisión jurídica, identidad legal completa y publicación web de privacidad, términos y eliminación.
 - [x] Integrar en cliente crear, consultar y cancelar solicitudes de eliminación mediante la API dedicada.
 - [x] Probar E2E reversible de eliminación Customer: crear `202`, consultar `200`, cancelar `200` y confirmar ausencia `404`.
-- [ ] Probar ejecución definitiva y anonimización en una cuenta Customer desechable, y publicar el equivalente para Provider.
+- [ ] Probar ejecución definitiva y anonimización en una cuenta Customer desechable.
+- [x] Integrar y probar solicitud, consulta y cancelación reversible de eliminación Provider.
+- [ ] Probar confirmación irreversible Provider con una cuenta desechable; nunca usar la cuenta QA operativa.
 
 ## Publicación
 

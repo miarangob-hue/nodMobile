@@ -83,7 +83,7 @@ import { registerPushNotifications, type PushNotificationData } from "../service
 import { getDogBreeds } from "../api/pets";
 import { createHostingBooking, getHostingHost, getMyHostingBookings, searchHosting, updateHostingBookingStatus, type HostingBooking, type HostingDetail, type HostingHost } from "../api/hosting";
 import { createCommunitySpot, listCustomerSpots, type CommunitySpot } from "../api/spots";
-import { addCommunityComment, createCommunityPost, getCommunityFeed, toggleCommunityLike, type CommunityPost } from "../api/community";
+import { addCommunityComment, createCommunityPost, getCommunityBadges as getServerCommunityBadges, getCommunityFeed, getCommunityRanking, getCommunityStats, toggleCommunityLike, type CommunityBadge, type CommunityPost, type CommunityRanking, type CommunityStats } from "../api/community";
 import { searchChileanAddresses, type AddressSuggestion } from "../api/location";
 import { getChileanComunas } from "../api/onboarding";
 import { isActiveStatus, isUpcomingStatus } from "../utils/bookingStatus";
@@ -1740,9 +1740,9 @@ function ResidentialView({ accessToken, customer, onCreated, onSupport, pets }: 
     try {
       const nights = Math.max(1, Math.round((new Date(checkOut).getTime() - new Date(checkIn).getTime()) / 86400000));
       const price = host.estimated_total ?? (host.nightly_rate ?? 0) * nights;
-      const created = await createHostingBooking({ hostingProfileId: host.id, providerId: host.provider_id, customerId: customer.id, checkIn, checkOut, petIds: [pet.id], price, currency: host.currency ?? "CLP", specialInstructions: `Mascota: ${pet.name}`, accessToken });
+      const created = await createHostingBooking({ hostingProfileId: host.id, providerId: host.provider_id, customerId: customer.id, checkIn, checkOut, petIds: [pet.id], price, currency: host.currency ?? "CLP", address: host.address, comuna: host.comuna, city: host.city, latitude: host.latitude, longitude: host.longitude, specialInstructions: `Mascota: ${pet.name}`, accessToken });
       if (created?.id) { await onCreated({ id: String(created.id), provider_id: host.provider_id, customer_id: customer.id, pet_id: pet.id, pet_name: pet.name, provider_name: host.host_name ?? host.title, service_name: "Hospedaje residencial", starts_at: new Date(`${checkIn}T15:00:00`).toISOString(), ends_at: new Date(`${checkOut}T12:00:00`).toISOString(), status: String(created.status ?? "PENDING"), price: Number(created.total_amount ?? 0), currency: String(created.currency ?? "CLP"), address: host.address, comuna: host.comuna }); await loadBookings(); }
-    } catch { setReservationError(true); }
+    } catch (error) { setReservationError(true); setError(getCustomerError(error)); }
     finally { setSaving(false); }
   }
 
@@ -1754,7 +1754,7 @@ function ResidentialView({ accessToken, customer, onCreated, onSupport, pets }: 
         <InfoRow label="Ubicación" value={[host.address, host.comuna].filter(Boolean).join(", ")} /><InfoRow label="Propiedad" value={host.property_type ?? "No indicada"} /><InfoRow label="Capacidad" value={`${host.max_pets_capacity ?? 1} mascota(s)`} /><InfoRow label="Tarifa" value={`${formatMoney(host.nightly_rate ?? 0)} por noche`} /><InfoRow label="Mascota adicional" value={formatMoney(host.extra_pet_rate ?? 0)} /><InfoRow label="Retiro" value={formatMoney(host.pickup_service_rate ?? 0)} /><InfoRow label="Patio" value={host.has_yard ? "Sí" : "No"} /><InfoRow label="Acepta" value={(host.accepted_pet_types ?? []).join(", ") || "Consultar"} /><InfoRow label="Tamaños" value={(host.accepted_pet_sizes ?? []).join(", ") || "Consultar"} /><InfoRow label="Evaluación" value={host.rating ? `${host.rating.toFixed(1)} (${host.review_count ?? 0} reseñas)` : "Sin reseñas"} /><InfoRow label="Verificación" value={host.is_verified ? "Verificado" : "Pendiente"} />
         {(host.rules_and_amenities?.amenities ?? []).length ? <Text style={styles.panelText}>Comodidades: {host.rules_and_amenities?.amenities?.join(", ")}</Text> : null}
       </View>
-      {reservationError ? <View style={styles.bookingErrorCard}><Feather color="#EE7C2B" name="alert-triangle" size={28} /><Text style={styles.panelTitle}>No pudimos completar tu reserva</Text><Text style={styles.panelText}>El backend Provider no aceptó la sesión del cliente. Inténtalo nuevamente o contacta a soporte.</Text><ActionButton busy={saving} icon="refresh-cw" label="Reintentar" onPress={() => void reserve()} variant="primary" /><ActionButton icon="life-buoy" label="Contactar soporte" onPress={onSupport} variant="secondary" /></View> : <View style={styles.panel}><Text style={styles.panelTitle}>Solicitar estadía</Text><Text style={styles.panelText}>{checkIn} → {checkOut}</Text><Segmented items={pets.map((pet) => ({ label: pet.name, value: pet.id }))} value={petId} onChange={setPetId} /><ActionButton busy={saving} icon="calendar" label="Reservar y abrir chat" onPress={() => void reserve()} variant="primary" /></View>}
+      {reservationError ? <View style={styles.bookingErrorCard}><Feather color="#EE7C2B" name="alert-triangle" size={28} /><Text style={styles.panelTitle}>No pudimos completar tu reserva</Text><Text style={styles.panelText}>{error ?? "Provider no pudo crear la reserva residencial. Inténtalo nuevamente o contacta a soporte."}</Text><ActionButton busy={saving} icon="refresh-cw" label="Reintentar" onPress={() => void reserve()} variant="primary" /><ActionButton icon="life-buoy" label="Contactar soporte" onPress={onSupport} variant="secondary" /></View> : <View style={styles.panel}><Text style={styles.panelTitle}>Solicitar estadía</Text><Text style={styles.panelText}>{checkIn} → {checkOut}</Text><Segmented items={pets.map((pet) => ({ label: pet.name, value: pet.id }))} value={petId} onChange={setPetId} /><ActionButton busy={saving} icon="calendar" label="Reservar y abrir chat" onPress={() => void reserve()} variant="primary" /></View>}
     </>;
   }
 
@@ -2672,6 +2672,10 @@ function SpotUnlocksView({
   const [feed, setFeed] = useState<CommunityPost[]>([]);
   const [feedFilter, setFeedFilter] = useState<"for_you" | "following" | "nearby">("for_you");
   const [commentDrafts, setCommentDrafts] = useState<Record<string, string>>({});
+  const [communityStats, setCommunityStats] = useState<CommunityStats | null>(null);
+  const [communityBadges, setCommunityBadges] = useState<CommunityBadge[]>([]);
+  const [communityRanking, setCommunityRanking] = useState<CommunityRanking | null>(null);
+  const [rankingPeriod, setRankingPeriod] = useState<"all_time" | "monthly" | "weekly">("all_time");
 
   const loadFeed = useCallback(async () => {
     try { setFeed(await getCommunityFeed({ userId: customerId, filter: feedFilter, accessToken })); }
@@ -2679,6 +2683,23 @@ function SpotUnlocksView({
   }, [accessToken, customerId, feedFilter]);
 
   useEffect(() => { void loadFeed(); }, [loadFeed]);
+
+  const loadCommunityProgress = useCallback(async () => {
+    try {
+      const [stats, badges, ranking] = await Promise.all([
+        getCommunityStats(accessToken),
+        getServerCommunityBadges(accessToken),
+        getCommunityRanking({ period: rankingPeriod, accessToken })
+      ]);
+      setCommunityStats(stats);
+      setCommunityBadges(badges);
+      setCommunityRanking(ranking);
+    } catch (currentError) {
+      console.warn("community progress", currentError);
+    }
+  }, [accessToken, rankingPeriod]);
+
+  useEffect(() => { void loadCommunityProgress(); }, [loadCommunityProgress]);
 
   async function takePhoto() {
     const permission = await ImagePicker.requestCameraPermissionsAsync();
@@ -2743,7 +2764,7 @@ function SpotUnlocksView({
       onChange(nextSpots);
       if (photoBase64) {
         await createCommunityPost({ caption: [title.trim(), notes.trim()].filter(Boolean).join(" · "), mediaBase64: photoBase64, petId: selectedPet?.id, location: address.trim() || undefined, accessToken });
-        await loadFeed();
+        await Promise.all([loadFeed(), loadCommunityProgress()]);
       }
       setTitle("");
       setAddress("");
@@ -2823,13 +2844,21 @@ function SpotUnlocksView({
 
       <View style={styles.panel}>
         <Text style={styles.panelTitle}>Progreso y medallas</Text>
-        <Text style={styles.panelText}>Ganas 100 puntos por lugar y bonos por foto, GPS y variedad.</Text>
+        <Text style={styles.panelText}>Los puntos y medallas se calculan en el servidor con reglas anti-abuso.</Text>
         <View style={styles.summaryGrid}>
-          <SummaryItem icon="award" label="Puntos" value={String(getCommunityPoints(spots))} />
-          <SummaryItem icon="star" label="Medallas" value={String(getCommunityBadges(spots).length)} />
-          <SummaryItem icon="map" label="Categorías" value={String(new Set(spots.map((spot) => spot.category)).size)} />
+          <SummaryItem icon="award" label="Puntos" value={String(communityStats?.points ?? 0)} />
+          <SummaryItem icon="star" label="Nivel" value={communityStats?.level_name ?? "Cachorro"} />
+          <SummaryItem icon="shield" label="Medallas" value={`${communityStats?.badges_unlocked ?? 0}/${communityStats?.badges_total ?? communityBadges.length}`} />
         </View>
-        {getCommunityBadges(spots).map((badge) => <Detail key={badge.name} icon={badge.icon} text={`${badge.name}: ${badge.description}`} />)}
+        <Text style={styles.panelText}>Progreso al siguiente nivel: {Math.round(communityStats?.progress_pct ?? 0)}%</Text>
+        {communityBadges.filter((badge) => badge.unlocked).map((badge) => <Detail key={badge.key} icon="award" text={`${badge.icon ?? "🏅"} ${badge.name}: ${badge.description}`} />)}
+      </View>
+
+      <View style={styles.panel}>
+        <Text style={styles.panelTitle}>Ranking comunitario</Text>
+        <Segmented items={[{ label: "Histórico", value: "all_time" }, { label: "Mes", value: "monthly" }, { label: "Semana", value: "weekly" }]} onChange={(value) => setRankingPeriod(value as typeof rankingPeriod)} value={rankingPeriod} />
+        {communityRanking?.my_rank ? <Text style={styles.panelText}>Tu posición: #{communityRanking.my_rank.rank} · {communityRanking.my_rank.points} puntos</Text> : <Text style={styles.panelText}>Aún no apareces en este ranking.</Text>}
+        {(communityRanking?.items ?? []).slice(0, 10).map((item) => <InfoRow key={`${item.rank}-${item.user_id}`} label={`#${item.rank} ${item.display_name}`} value={`${item.points} pts · ${item.level_name}`} />)}
       </View>
 
       <View style={styles.panel}>
@@ -2848,8 +2877,8 @@ function SpotUnlocksView({
         {feed.length === 0 ? <Text style={styles.panelText}>Aún no hay publicaciones para este filtro.</Text> : feed.map((post) => <View key={post.id} style={styles.spotCard}>
           {post.media_url ? <Image source={{ uri: post.media_url }} style={styles.spotImage} /> : null}
           <View style={[styles.cardCopy, styles.spotCardBody]}><Text style={styles.cardTitle}>{post.author?.display_name ?? post.pet?.name ?? "Comunidad NOD"}</Text><Text style={styles.cardText}>{post.caption}</Text>{post.location ? <Text style={styles.cardText}><Feather name="map-pin" size={13} /> {post.location}</Text> : null}
-            <View style={styles.actionRow}><Pressable onPress={() => void toggleCommunityLike(post.id, accessToken).then(loadFeed).catch((currentError) => Alert.alert("No se pudo reaccionar", getCustomerError(currentError)))} style={styles.smallSecondaryButton}><Text style={styles.smallSecondaryButtonText}>{post.user_has_liked ? "♥" : "♡"} {post.likes_count ?? 0}</Text></Pressable><Text style={styles.cardText}>{post.comments_count ?? 0} comentarios</Text></View>
-            <View style={styles.actionRow}><TextInput onChangeText={(value) => setCommentDrafts((current) => ({ ...current, [post.id]: value }))} placeholder="Escribe un comentario" showSoftInputOnFocus style={[styles.input, styles.cardCopy]} value={commentDrafts[post.id] ?? ""} /><Pressable onPress={() => { const content = commentDrafts[post.id]?.trim(); if (!content) return; void addCommunityComment(post.id, content, petId || undefined, accessToken).then(() => { setCommentDrafts((current) => ({ ...current, [post.id]: "" })); return loadFeed(); }).catch((currentError) => Alert.alert("No se pudo comentar", getCustomerError(currentError))); }} style={styles.smallPrimaryButton}><Feather color="#ffffff" name="send" size={16} /></Pressable></View>
+            <View style={styles.actionRow}><Pressable onPress={() => void toggleCommunityLike(post.id, accessToken).then(() => Promise.all([loadFeed(), loadCommunityProgress()])).catch((currentError) => Alert.alert("No se pudo reaccionar", getCustomerError(currentError)))} style={styles.smallSecondaryButton}><Text style={styles.smallSecondaryButtonText}>{post.user_has_liked ? "♥" : "♡"} {post.likes_count ?? 0}</Text></Pressable><Text style={styles.cardText}>{post.comments_count ?? 0} comentarios</Text></View>
+            <View style={styles.actionRow}><TextInput onChangeText={(value) => setCommentDrafts((current) => ({ ...current, [post.id]: value }))} placeholder="Escribe un comentario" showSoftInputOnFocus style={[styles.input, styles.cardCopy]} value={commentDrafts[post.id] ?? ""} /><Pressable onPress={() => { const content = commentDrafts[post.id]?.trim(); if (!content) return; void addCommunityComment(post.id, content, petId || undefined, accessToken).then(() => { setCommentDrafts((current) => ({ ...current, [post.id]: "" })); return Promise.all([loadFeed(), loadCommunityProgress()]); }).catch((currentError) => Alert.alert("No se pudo comentar", getCustomerError(currentError))); }} style={styles.smallPrimaryButton}><Feather color="#ffffff" name="send" size={16} /></Pressable></View>
           </View>
         </View>)}
       </View>

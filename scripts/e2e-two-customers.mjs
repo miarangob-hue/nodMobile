@@ -104,11 +104,16 @@ if (host?.id) {
   const nights = 2;
   const housing = observe("housing booking with customer JWT", await call(providerBase, providerKey, "POST", "/create-booking-request", {
     provider_id: host.provider_id,
-    service_id: "90e09214-ffeb-4a57-8ba7-e317c2be6d4e",
+    hosting_profile_id: host.id,
     price: Number(host.nightly_rate ?? 0) * nights,
     currency: host.currency ?? "CLP",
     starts_at: new Date(`${checkIn}T14:00:00`).toISOString(),
     ends_at: new Date(`${checkOut}T12:00:00`).toISOString(),
+    address: host.address,
+    commune: host.comuna,
+    city: host.city,
+    latitude: host.latitude,
+    longitude: host.longitude,
     notes: `Reserva QA E2E; hosting_profile_id=${host.id}; pet_ids=${first.petId}`
   }, first.token));
   housingBookingId = (housing?.booking ?? housing)?.id ?? null;
@@ -143,7 +148,7 @@ results.push({ name: "provider catalog", passed: Boolean(provider), status: prov
 if (provider?.id && serviceId) {
   const startsAt = new Date(Date.now() + 10 * 86400000).toISOString();
   const endsAt = new Date(Date.now() + 10 * 86400000 + 3600000).toISOString();
-  const bookingPayload = record("service booking", await call(providerBase, providerKey, "POST", "/create-booking-request", { provider_id: provider.id, service_id: serviceId, starts_at: startsAt, ends_at: endsAt, price: Number(provider.price_from ?? 0), currency: provider.currency ?? "CLP", notes: `Reserva normal QA E2E; pet_id=${first.petId}; address=Av. Providencia 1234; comuna=Providencia; city=Santiago` }, first.token));
+  const bookingPayload = record("service booking", await call(providerBase, providerKey, "POST", "/create-booking-request", { provider_id: provider.id, service_id: serviceId, starts_at: startsAt, ends_at: endsAt, price: Number(provider.price_from ?? 0), currency: provider.currency ?? "CLP", address: "Av. Providencia 1234", commune: "Providencia", city: "Santiago", latitude: -33.4289, longitude: -70.6090, notes: `Reserva normal QA E2E; pet_id=${first.petId}` }, first.token));
   serviceBookingId = (bookingPayload.booking ?? bookingPayload.reservation ?? bookingPayload).id;
   if (serviceBookingId) {
     observe("booking chat open", await call(providerBase, providerKey, "POST", "/get-or-create-booking-chat", { booking_id: serviceBookingId }, first.token));

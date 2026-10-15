@@ -116,7 +116,12 @@ if (mutate) {
       ends_at: endsAt,
       price: Number(price?.price ?? 0),
       currency: price?.currency ?? "CLP",
-      notes: `NOD QA E2E 1.0.26 - reserva técnica sin cobro; pet_id=${pet.id}; address=Av. Providencia 1234, Providencia, Chile; comuna=Providencia; city=Región Metropolitana de Santiago; latitude=-33.4289; longitude=-70.6090`
+      address: "Av. Providencia 1234",
+      commune: "Providencia",
+      city: "Santiago",
+      latitude: -33.4289,
+      longitude: -70.6090,
+      notes: `NOD QA E2E 1.0.26 - reserva técnica sin cobro; pet_id=${pet.id}`
     });
     const booking = bookingResult.data?.booking ?? bookingResult.data?.reservation ?? bookingResult.data?.data ?? bookingResult.data;
     const bookingId = booking?.id ?? booking?.booking_id ?? booking?.reservation_id;

@@ -30,9 +30,9 @@ Android y iOS comparten el código funcional y la versión pública `1.0.26`. La
 - Wallet, pagos con Créditos NOD y flujo de Mercado Pago.
 - Solicitud autenticada de eliminación de cuentas de cliente.
 
-La validación local actual ejecuta **33 pruebas**. La certificación E2E más reciente se realizó contra los backends desplegados después de la centralización de reservas y la integración de pagos con `provider_bookings`.
+La validación local actual ejecuta **37 pruebas** y TypeScript sin errores. La certificación E2E más reciente se realizó contra los backends desplegados después de la centralización de reservas, la integración de pagos con `provider_bookings` y la actualización Provider del 14 de octubre.
 
-### Matriz E2E — 13 de octubre de 2026
+### Matriz E2E — 14 de octubre de 2026
 
 | Área | Resultado | Evidencia |
 |---|---|---|
@@ -40,22 +40,23 @@ La validación local actual ejecuta **33 pruebas**. La certificación E2E más r
 | Perfil, mascotas y ficha médica | Aprobado | Lectura autenticada `200` |
 | Dating y match mutuo | Aprobado | Dos perfiles nuevos completaron Discovery, likes mutuos, match y chat; el perfil histórico QA fue reparado y Discovery volvió a responder `200` |
 | Chat de match entre mascotas | Aprobado | Mensaje creado `201` y recibido por el segundo perfil `200` |
-| Comunidad | Aprobado | Publicación `201`, like `200` y comentario `201` |
+| Comunidad | Aprobado | Publicación `201`, like `200`, comentario `201`, estadísticas, 10 medallas y rankings global/por período `200` |
 | Catálogo y reserva normal | Aprobado | Creación, listado, chat y cancelación usan Provider API como fuente única |
 | Ciclo interno Provider | Aprobado | Crear, aceptar, iniciar, tracking, pausar, reanudar y completar funcionan |
 | Chat de reserva de servicio | Aprobado tras corrección P0 | Customer crea/abre chat, envía con `body`, lista y marca lectura con `200/201` |
 | Housing: búsqueda y ficha | Aprobado | `/search-hosting` y `/get-hosting-host` responden `200` con disponibilidad |
-| Housing: reserva | Aprobado tras corrección P0 | JWT Customer crea `201`, lista `200` y cancela `200`; el backend infiere la identidad Customer |
+| Housing: reserva | Regresión backend | Búsqueda y detalle funcionan, pero el despliegue del 14-10 rechaza la creación: UUID anterior `404` y contrato `hosting_profile_id` `422 out_of_coverage` pese a la exención documentada |
 | Wallet, compras y notificaciones Customer | Aprobado | Consultas autenticadas `200` |
 | Pagos Provider + Mercado Pago | Aprobado hasta checkout | Reserva Provider reconocida; estado `unpaid` → checkout `201` → `pending`; falta completar una tarjeta sandbox y validar webhook `paid` |
 | Créditos NOD | Aprobado sin saldo | Wallet y paquetes `200`; débito sin saldo responde `402 insufficient_credits`; falta certificar débito exitoso e idempotente con saldo |
 | Finanzas, documentos y reputación Provider | Aprobado | Balance, rendimiento, payouts, movimientos, bancos, impuestos, documentos y reseñas `200` |
 | Seguridad sin sesión | Aprobado | Customer y Provider rechazan recursos privados con `401` |
+| Eliminación de cuenta Provider | Aprobado reversible | Solicitud `201`, consulta pendiente `200`, cancelación `200`; texto de confirmación inválido `400`. No se ejecutó el borrado irreversible de la cuenta QA |
 | Páginas legales | Aprobado | Privacidad, términos y eliminación responden `200` |
 
-La recertificación del 13 de octubre de 2026 obtuvo **38/38 comprobaciones** con dos perfiles nuevos: Discovery con foto principal, match y chat, comunidad, reservas normales y Housing funcionan de extremo a extremo. Ambos tipos de reserva crean, abren chat, envían/listan mensajes y cancelan correctamente en Provider API. El ciclo operativo adicional aprobó creación, visibilidad, aceptación, inicio, GPS, pausa, reanudación, finalización, detalle, timeline, ETA, ruta y fotos. El backend exige subir la foto social mediante `/pets/:id/social-profile/photos`, `customer_id` en la query de `/get-customer-bookings` y el campo `body` en `/send-chat-message`; la app y la suite usan esos contratos efectivos.
+La certificación del 13 de octubre obtuvo **38/38 comprobaciones**. Tras el despliegue Provider del 14 de octubre, la recertificación obtuvo **30/32**: registro, mascotas, Discovery, match/chat, comunidad y reserva normal siguen aprobados, pero la creación Housing y su visibilidad quedan bloqueadas por la regresión descrita arriba. El ciclo operativo adicional aprobó creación, visibilidad, aceptación, inicio, GPS, pausa, reanudación, finalización, detalle, timeline, ETA, ruta y fotos.
 
-La auditoría general obtuvo **74/79 contratos respondiendo**. Los cinco ausentes son las rutas Housing antiguas de Customer API (`/hosting/*`), retiradas intencionalmente después de centralizar el flujo en Provider API; no son dependencias de Mobile. La mascota del perfil histórico QA no tenía perfil social publicado: se reconstruyó el perfil, se agregó foto principal y `GET /discovery/candidates` pasó de `404` a `200` con candidatos.
+La auditoría general repetida el 14 de octubre obtuvo **74/79 contratos respondiendo**. Los cinco ausentes son las rutas Housing antiguas de Customer API (`/hosting/*`), retiradas intencionalmente después de centralizar el flujo en Provider API; no son dependencias de Mobile. Una regresión autenticada adicional aprobó **15/15** lecturas de Customer y Provider. La mascota del perfil histórico QA no tenía perfil social publicado: se reconstruyó el perfil, se agregó foto principal y `GET /discovery/candidates` pasó de `404` a `200` con candidatos.
 
 El smoke Android instaló `NOD-android-v28.apk` en el AVD `NOD_Pixel`: `MainActivity`, onboarding, Login, selector de rol, formulario, teclado y botón Google se renderizaron correctamente. Al pulsar Google, la app informa correctamente que falta `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`; no es posible completar OAuth ni push hasta cargar Client IDs, proyecto EAS y archivos FCM/APNs.
 
@@ -65,28 +66,33 @@ La regresión autenticada Customer → Provider también confirmó creación, vi
 
 La certificación de pagos confirmó que `nod-api` reconoce las reservas de Provider. `GET /payments/bookings/:id` devolvió `unpaid`, `POST /payments/checkout` creó una preferencia sandbox con `init_point` y `sandbox_init_point`, y la consulta posterior devolvió `pending`. `POST /wallet/topups` también creó una preferencia sandbox `201`. Mobile normaliza estos contratos y envía `idempotency_key` al pagar con créditos. No se realizó ningún cargo real; queda pendiente completar una tarjeta sandbox para verificar webhook, transición a `paid`, acreditación de créditos y reembolsos.
 
+La gamificación persistente también quedó recertificada: después de publicar, reaccionar y comentar, la cuenta E2E reportó 13 puntos, nivel Cachorro, una medalla y posición 2; el catálogo devolvió 10 medallas y los rankings global, mensual, semanal y por comuna respondieron `200`.
+
 ### Limitaciones actuales del backend
 
 - Todas las reservas usan Provider API como fuente única: `/create-booking-request`, `/get-customer-bookings` y `/cancel-booking`; Housing agrega `/search-hosting` y `/get-hosting-host`.
 - El proveedor `pabloxp@gmail.com` tiene un perfil residencial activo en Provider API (`NOD Residencial QA`, Providencia, $25.000 por noche).
+- Ese proveedor actualmente devuelve cero precios/servicios asociados; por eso el ciclo operativo Provider no puede recertificarse de nuevo con esa cuenta bajo la validación estricta de pertenencia hasta corregir su asociación. La reserva normal y los pagos sí se probaron con una combinación proveedor/servicio válida del catálogo.
 - Housing y chat de reservas ya aceptan conjuntamente `x-api-key` y JWT Customer. La identidad del cliente se obtiene del token y la app no envía `customer_id` al crear la reserva.
 - Customer API retiró `GET/POST /bookings` y `/bookings/:id/cancel`; la app ya no depende de esas rutas.
 - Payments ya consulta las reservas de Provider: Mobile normaliza `init_point`, `sandbox_init_point` y `payment_status`, y usa idempotencia al pagar con Créditos NOD.
-- FCM/APNs, confirmación final de pagos sandbox, payouts y eliminación definitiva de proveedores requieren certificación con servicios externos.
+- Las reservas envían ubicación estructurada (`address`, `commune`, `city`, `latitude`, `longitude`) y conservan el fallback desde `notes` solo para registros históricos.
+- Provider dispone en Ajustes del flujo dedicado para programar, consultar, cancelar y confirmar la eliminación de cuenta.
+- FCM/APNs, confirmación final de pagos sandbox, payouts y la ejecución irreversible de eliminación requieren certificación con servicios externos o cuentas desechables.
 
 ## TO-DO
 
 ### P0 — Bloqueos de backend
 
 - [x] Migrar búsqueda, ficha, creación y listado Housing directamente a Provider API.
-- [x] Certificar el ciclo backend Housing: búsqueda, detalle, disponibilidad, creación, listado, confirmación y cancelación.
+- [ ] Recertificar creación Housing después de corregir la regresión `hosting_profile_id`/exención de cobertura; búsqueda y detalle continúan aprobados.
 - [x] Validar JWT Customer en `/create-booking-request` y `/cancel-booking` sin confiar en `customer_id` del body.
 - [x] Habilitar chat de reservas para Customer: crear, enviar, listar y marcar lectura.
 - [x] Crear y operar reservas normales directamente en Provider, conservando un único `booking_id`.
 - [x] Validar propiedad, fechas futuras y conflictos de disponibilidad al crear/cancelar reservas.
-- [ ] Rechazar `service_id` inexistentes y validar que el servicio pertenezca realmente al proveedor; QA confirmó que actualmente un UUID inexistente puede crear una reserva `201`.
-- [ ] Validar cobertura geográfica en backend y persistir dirección, comuna, ciudad y coordenadas; Provider actualmente ignora esos campos estructurados.
-- [ ] Publicar eliminación y anonimización de cuentas proveedor.
+- [x] Rechazar `service_id` inexistentes y validar que el servicio pertenezca realmente al proveedor (`404 service_not_found`).
+- [x] Validar cobertura geográfica (`422 out_of_coverage`) y persistir dirección, comuna, ciudad y coordenadas en creación/listados.
+- [x] Publicar e integrar solicitud, consulta, cancelación y confirmación de eliminación de cuentas Provider.
 
 ### P1 — Integraciones y pruebas
 
@@ -99,12 +105,14 @@ La certificación de pagos confirmó que `nod-api` reconoce las reservas de Prov
 - [x] Reparar el perfil social histórico de QA y confirmar `/discovery/candidates` con respuesta `200`.
 - [x] Probar creación, consulta y cancelación reversible de eliminación de cliente (`202`, `200`, luego `404` sin solicitud activa).
 - [ ] Probar la ejecución definitiva de eliminación y anonimización de cliente en una cuenta desechable.
+- [x] Probar el ciclo reversible Provider: solicitud `201`, consulta pendiente `200`, cancelación `200` y cuenta nuevamente activa.
+- [ ] Ejecutar la confirmación irreversible Provider en una cuenta desechable; la validación de texto incorrecto ya responde `400 confirmation_required`.
 - [ ] Repetir Google Login, push, pagos y permisos en dispositivos físicos con credenciales de producción/sandbox; no son certificables únicamente por HTTP.
 
 ### P2 — Producto y publicación
 
-- [ ] Persistir puntos, niveles y medallas comunitarias en backend.
-- [ ] Agregar ranking comunitario global, por comuna y período.
+- [x] Persistir puntos, niveles y medallas comunitarias en backend e integrarlos en Mobile.
+- [x] Agregar ranking comunitario global, por comuna y período; Mobile permite cambiar entre histórico, mes y semana.
 - [ ] Incorporar disponibilidad horaria avanzada al filtro de proveedores.
 - [ ] Completar accesibilidad y pruebas con lector de pantalla y texto ampliado.
 - [ ] Configurar firma Android de producción y generar el AAB de Google Play.

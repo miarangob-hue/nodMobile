@@ -23,8 +23,10 @@ import { getChileanComunas } from "../api/onboarding";
 import { searchChileanAddresses, type AddressSuggestion } from "../api/location";
 import {
   acceptBooking,
+  cancelProviderAccountDeletion,
   cancelBooking,
   completeService,
+  confirmProviderAccountDeletion,
   createProviderBankAccount,
   createEmergencyAlert,
   createServiceIncident,
@@ -36,6 +38,7 @@ import {
   getOrCreateBookingChat,
   getProviderBalance,
   getProviderAvailability,
+  getProviderAccountDeletion,
   getProviderBankAccounts,
   getProviderBookings,
   getProviderDashboard,
@@ -59,6 +62,7 @@ import {
   markNotificationRead,
   pauseService,
   rejectBooking,
+  requestProviderAccountDeletion,
   requestProviderPayout,
   resumeService,
   sendChatMessage,
@@ -77,6 +81,7 @@ import type {
   NotificationItem,
   Provider,
   ProviderAvailabilitySlot,
+  ProviderAccountDeletionRequest,
   ProviderBalance,
   ProviderPerformance,
   ProviderPricing,
@@ -677,6 +682,7 @@ export function ProviderDashboardScreen({ provider, accessToken, onLogout, pushI
         error={error}
         notice={notice}
         accessToken={accessToken}
+        onLogout={onLogout}
         onAction={runBookingAction}
         onBack={() => setActiveView("home")}
         onOpenBooking={openBooking}
@@ -1388,6 +1394,7 @@ function DashboardDrillDown({
   notice,
   accessToken,
   provider,
+  onLogout,
   onBack,
   onOpenBooking,
   onAction
@@ -1402,6 +1409,7 @@ function DashboardDrillDown({
   notice: string | null;
   accessToken?: string | null;
   provider: Provider;
+  onLogout: () => void;
   onBack: () => void;
   onOpenBooking: (booking: Booking) => void;
   onAction: (booking: Booking, action: BookingAction) => Promise<void>;
@@ -1425,7 +1433,7 @@ function DashboardDrillDown({
         <FeedbackMessages error={error} notice={notice} />
 
         {operationalViews.includes(view) ? (
-          <OperationsPanel accessToken={accessToken} provider={provider} view={view} />
+          <OperationsPanel accessToken={accessToken} onLogout={onLogout} provider={provider} view={view} />
         ) : view === "availability" ? (
           <AvailabilityList availability={availability} />
         ) : bookings.length === 0 ? (
@@ -1468,11 +1476,13 @@ function QuickAction({
 function OperationsPanel({
   view,
   provider,
-  accessToken
+  accessToken,
+  onLogout
 }: {
   view: DashboardView;
   provider: Provider;
   accessToken?: string | null;
+  onLogout: () => void;
 }) {
   const [profile, setProfile] = useState<ProviderProfile | null>(null);
   const [pricing, setPricing] = useState<ProviderPricing[]>([]);
@@ -1600,6 +1610,7 @@ function OperationsPanel({
     return (
       <ProviderProfilePanel
         accessToken={accessToken}
+        onLogout={onLogout}
         onProfileChange={setProfile}
         pricing={pricing}
         profile={profile}
@@ -1686,12 +1697,14 @@ function OperationsPanel({
 
 function ProviderProfilePanel({
   accessToken,
+  onLogout,
   onProfileChange,
   provider,
   profile,
   pricing
 }: {
   accessToken?: string | null;
+  onLogout: () => void;
   onProfileChange: (profile: ProviderProfile | null) => void;
   provider: Provider;
   profile: ProviderProfile | null;
@@ -1712,6 +1725,8 @@ function ProviderProfilePanel({
   const [cancellationPolicy, setCancellationPolicy] = useState(profile?.cancellation_policy ?? "");
   const [isSaving, setIsSaving] = useState(false);
   const [isRequestingDeletion, setIsRequestingDeletion] = useState(false);
+  const [deletionRequest, setDeletionRequest] = useState<ProviderAccountDeletionRequest | null>(null);
+  const [deletionConfirmation, setDeletionConfirmation] = useState("");
 
   useEffect(() => {
     setBio(profile?.bio ?? "");
@@ -1726,6 +1741,12 @@ function ProviderProfilePanel({
 
   useEffect(() => {
     void getChileanComunas(accessToken).then(setComunaCatalog).catch(() => setComunaCatalog([]));
+  }, [accessToken]);
+
+  useEffect(() => {
+    void getProviderAccountDeletion({ accessToken })
+      .then((result) => setDeletionRequest(result.has_pending ? result.request ?? null : null))
+      .catch(() => setDeletionRequest(null));
   }, [accessToken]);
 
   useEffect(() => {
@@ -1803,15 +1824,9 @@ function ProviderProfilePanel({
           style: "destructive",
           onPress: () => {
             setIsRequestingDeletion(true);
-            void createSupportTicket({
-              userId: provider.id,
-              category: "account_deletion",
-              subject: "Solicitud de eliminación de cuenta proveedor",
-              message: "Solicito eliminar mi cuenta NOD y los datos personales asociados. Confirmar servicios, pagos pendientes y fecha efectiva por email.",
-              priority: "high",
-              accessToken
-            }).then(() => {
-              Alert.alert("Solicitud enviada", "Soporte verificará tu identidad y las operaciones pendientes antes de eliminar la cuenta.");
+            void requestProviderAccountDeletion({ reason: "Solicitud iniciada desde NOD Mobile", accessToken }).then((result) => {
+              setDeletionRequest(result.request);
+              Alert.alert("Solicitud programada", "La cuenta quedará programada para eliminación en 30 días. Puedes cancelar la solicitud durante ese periodo.");
             }).catch((error) => {
               Alert.alert("No se pudo enviar", getDashboardError(error));
             }).finally(() => setIsRequestingDeletion(false));
@@ -1819,6 +1834,37 @@ function ProviderProfilePanel({
         }
       ]
     );
+  }
+
+  function cancelAccountDeletion() {
+    setIsRequestingDeletion(true);
+    void cancelProviderAccountDeletion({ accessToken }).then(() => {
+      setDeletionRequest(null);
+      setDeletionConfirmation("");
+      Alert.alert("Solicitud cancelada", "Tu perfil fue reactivado y puedes seguir recibiendo reservas.");
+    }).catch((error) => Alert.alert("No se pudo cancelar", getDashboardError(error)))
+      .finally(() => setIsRequestingDeletion(false));
+  }
+
+  function confirmAccountDeletion() {
+    if (deletionConfirmation.trim() !== "ELIMINAR") {
+      Alert.alert("Confirmación requerida", "Escribe ELIMINAR para confirmar el borrado irreversible.");
+      return;
+    }
+    Alert.alert("Eliminar cuenta definitivamente", "Esta acción anonimiza tu cuenta y no se puede deshacer.", [
+      { text: "Volver", style: "cancel" },
+      {
+        text: "Eliminar definitivamente",
+        style: "destructive",
+        onPress: () => {
+          setIsRequestingDeletion(true);
+          void confirmProviderAccountDeletion({ confirmation: deletionConfirmation.trim(), accessToken }).then(() => {
+            Alert.alert("Cuenta eliminada", "Tu cuenta fue eliminada y la sesión se cerrará.", [{ text: "Aceptar", onPress: onLogout }]);
+          }).catch((error) => Alert.alert("No se pudo eliminar", getDashboardError(error)))
+            .finally(() => setIsRequestingDeletion(false));
+        }
+      }
+    ]);
   }
 
   return (
@@ -1959,8 +2005,19 @@ function ProviderProfilePanel({
       </View>
       <View style={styles.detailPanel}>
         <Text style={styles.panelTitle}>Privacidad y cuenta</Text>
-        <Text style={styles.panelText}>Puedes solicitar la eliminación de tu perfil. NOD verificará antes que no existan servicios, disputas o pagos pendientes.</Text>
-        <ActionButton busy={isRequestingDeletion} icon="trash-2" label="Solicitar eliminación de cuenta" onPress={requestAccountDeletion} variant="secondary" />
+        {deletionRequest ? (
+          <>
+            <Text style={styles.panelText}>Eliminación programada{deletionRequest.scheduled_for ? ` para ${new Date(deletionRequest.scheduled_for).toLocaleDateString("es-CL")}` : ""}. Durante el periodo de gracia puedes cancelar la solicitud.</Text>
+            <ActionButton busy={isRequestingDeletion} icon="rotate-ccw" label="Cancelar solicitud" onPress={cancelAccountDeletion} variant="secondary" />
+            <TextInput autoCapitalize="characters" onChangeText={setDeletionConfirmation} placeholder="Escribe ELIMINAR" style={styles.formInput} value={deletionConfirmation} />
+            <ActionButton busy={isRequestingDeletion} icon="trash-2" label="Eliminar definitivamente" onPress={confirmAccountDeletion} variant="secondary" />
+          </>
+        ) : (
+          <>
+            <Text style={styles.panelText}>Puedes programar la eliminación de tu cuenta con 30 días de gracia.</Text>
+            <ActionButton busy={isRequestingDeletion} icon="trash-2" label="Solicitar eliminación de cuenta" onPress={requestAccountDeletion} variant="secondary" />
+          </>
+        )}
       </View>
     </>
   );

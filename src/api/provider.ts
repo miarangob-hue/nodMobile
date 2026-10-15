@@ -918,6 +918,36 @@ export async function createSupportTicket({
   return hasOwn(response, "ticket") ? response.ticket as SupportTicket | undefined : response as SupportTicket;
 }
 
+export async function getProviderAccountDeletion({ accessToken }: { accessToken?: string | null }) {
+  return apiRequest<import("../types/api").ProviderAccountDeletionStatus>("/get-provider-account-deletion", {
+    accessToken
+  });
+}
+
+export async function requestProviderAccountDeletion({ reason, accessToken }: { reason?: string | null; accessToken?: string | null }) {
+  return apiRequest<{ ok: boolean; request: import("../types/api").ProviderAccountDeletionRequest }>("/request-provider-account-deletion", {
+    method: "POST",
+    body: { reason: reason?.trim() || undefined },
+    accessToken
+  });
+}
+
+export async function cancelProviderAccountDeletion({ accessToken }: { accessToken?: string | null }) {
+  return apiRequest<{ ok: boolean; request: import("../types/api").ProviderAccountDeletionRequest }>("/cancel-provider-account-deletion", {
+    method: "POST",
+    body: {},
+    accessToken
+  });
+}
+
+export async function confirmProviderAccountDeletion({ confirmation, accessToken }: { confirmation: string; accessToken?: string | null }) {
+  return apiRequest<{ ok: boolean; request?: import("../types/api").ProviderAccountDeletionRequest }>("/confirm-provider-account-deletion", {
+    method: "POST",
+    body: { confirm: confirmation },
+    accessToken
+  });
+}
+
 export async function getEmergencyContacts({
   bookingId,
   accessToken

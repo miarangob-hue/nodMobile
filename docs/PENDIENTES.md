@@ -1,16 +1,18 @@
 # Pendientes de NOD Mobile
 
-Última actualización: 13 de octubre de 2026. Versión móvil: 1.0.26 (`versionCode 28`).
+Última actualización: 14 de octubre de 2026. Versión móvil: 1.0.26 (`versionCode 28`).
 
 ## Backend bloqueante
 
 - Housing y chat ya validan JWT Customer junto con `x-api-key`. La app fue ajustada para inferir identidad al crear, enviar `customer_id` solo en la query de listado y usar `body` como contenido del mensaje.
-- Reservas normales y Housing ya usan Provider como fuente única; creación, listado, chat y cancelación fueron recertificados E2E.
-- Corregir `/create-booking-request`: actualmente acepta un `service_id` UUID inexistente con `201`. Debe validar existencia, vigencia y asociación del servicio al proveedor.
-- Validar cobertura geográfica: una reserva técnica en Antártica fue aceptada con `201` por un proveedor de Providencia.
-- Persistir dirección, comuna, ciudad, latitud y longitud. Provider acepta esos campos pero devuelve los cinco como `null` tanto al crear como al listar; Mobile conserva temporalmente metadatos de presentación en `notes`.
+- Reservas normales y Housing ya usan Provider como fuente única. Creación, listado, chat y cancelación de reserva normal fueron recertificados E2E; en Housing solo búsqueda y detalle están aprobados porque la creación continúa bloqueada por la regresión descrita abajo.
+- Validación de servicio recertificada: UUID inexistente responde `404 service_not_found`.
+- Cobertura geográfica recertificada: una reserva en Antártica para un proveedor de Providencia responde `422 out_of_coverage`.
+- Ubicación recertificada: dirección, `commune`, ciudad y coordenadas se conservan en creación y listado, también dentro de `location`. Mobile dejó de serializar estos campos en `notes`.
 - La validación de fechas y propiedad sí está activa: fecha pasada `400`, horario ocupado `409` y cancelación de reserva ajena `403`.
-- Publicar el flujo dedicado de eliminación y anonimización para cuentas proveedor, equivalente al disponible para clientes.
+- Eliminación Provider integrada: solicitar, consultar, cancelar y confirmar. El ciclo reversible pasó E2E y la cuenta QA quedó activa; falta ejecutar la confirmación irreversible solo en una cuenta desechable.
+- Regresión Housing tras el despliegue: búsqueda y detalle responden `200`, pero el UUID de servicio anterior devuelve `404 service_not_found`; el servicio de alojamiento del catálogo también devuelve `404`, y el contrato con `hosting_profile_id` devuelve `422 out_of_coverage` aunque el informe declara que Housing está exento. Mobile ya envía `hosting_profile_id` y la ubicación del anfitrión.
+- El proveedor QA `pabloxp@gmail.com` mantiene su perfil Housing activo, pero actualmente devuelve cero precios/servicios asociados. La validación estricta impide repetir con esa cuenta el ciclo operativo hasta restaurar la asociación; las reservas normales y pagos se certificaron con una combinación válida del catálogo.
 
 ## Notificaciones e integraciones
 
@@ -21,8 +23,8 @@
 
 ## Comunidad
 
-- Persistir puntos, niveles y medallas en backend para que no puedan alterarse desde el teléfono y sobrevivan reinstalaciones.
-- Implementar ranking comunitario global, por comuna y período.
+- Puntos, niveles y diez medallas ya se persisten en backend. Mobile consume `/community/stats` y `/community/badges` y refresca el progreso después de publicaciones, comentarios y likes.
+- Ranking integrado mediante `/community/ranking`; Mobile muestra histórico, mensual y semanal, y el backend admite filtro por comuna.
 - Probar moderación completa con una sesión que tenga permiso `admin:moderation`.
 - El control de acceso fue comprobado: una sesión Customer recibe `403 forbidden`; no hay credenciales administrativas configuradas para probar resolución, suspensión y restauración.
 
@@ -39,10 +41,14 @@
 
 ## Pruebas finales
 
-- Resultado funcional actual: **38/38** con dos perfiles nuevos en registro, mascotas, Discovery, match/chat, comunidad, reserva normal, Housing y chats. Las reservas QA de servicio y Housing fueron canceladas al finalizar.
+- Resultado funcional previo: **38/38**. Recertificación posterior al despliegue del 14-10: **30/32**; fallan exclusivamente creación y visibilidad Housing porque no se genera la reserva. Registro, mascotas, Discovery, match/chat, comunidad, reserva normal y chat normal siguen aprobados.
 - Ciclo Provider aprobado: crear, visualizar, aceptar, iniciar, registrar GPS, pausar, reanudar, completar y consultar detalle, timeline, ETA, ruta y fotos.
 - Auditoría de contratos: **74/79** responden. Los cinco ausentes corresponden a `/hosting/*` de Customer API, retirados y reemplazados por las rutas Provider que Mobile utiliza y que pasaron E2E.
+- Regresión autenticada de lectura: **15/15** consultas Customer/Provider respondieron correctamente.
 - Perfil histórico QA reparado: faltaba publicar el perfil social; después de crear perfil y foto principal, Discovery respondió `200` con cinco candidatos.
+- Gamificación recertificada: estadísticas, catálogo de 10 medallas y rankings global/mensual/semanal/por comuna respondieron `200`; la actividad E2E persistió 13 puntos, nivel Cachorro, una medalla y posición 2.
+- Validación local aprobada: TypeScript sin errores y **37/37** pruebas automatizadas.
+- Eliminación Provider reversible aprobada: solicitud `201`, consulta `200`, cancelación `200` y cuenta activa; confirmación inválida `400`. Falta el borrado irreversible con una cuenta desechable.
 - Pagos Provider: consulta inicial `unpaid`, checkout sandbox `201`, consulta posterior `pending`; falta completar pago sandbox y comprobar `paid` por webhook.
 - Eliminación Customer reversible aprobada: crear, consultar y cancelar. Falta ejecutar eliminación/anonimización definitiva en una cuenta desechable.
 - Ejecutar regresión E2E en teléfonos físicos Android e iPhone: registro, teclado, permisos denegados, cámara, GPS, mapa, red intermitente, reservas, chat y push.
@@ -55,4 +61,3 @@
 ## Mejoras no bloqueantes
 
 - Agregar disponibilidad horaria avanzada al filtro de paseadores.
-- Completar ranking y logros comunitarios server-side.

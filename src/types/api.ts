@@ -5,6 +5,30 @@ export type ApiErrorBody = {
   message?: string;
 };
 
+export type BookingLocation = {
+  address?: string | null;
+  commune?: string | null;
+  city?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+};
+
+export type ProviderAccountDeletionRequest = {
+  id: UUID;
+  status: "pending" | "cancelled" | "completed" | string;
+  reason?: string | null;
+  requested_at?: string | null;
+  scheduled_for?: string | null;
+  cancelled_at?: string | null;
+  completed_at?: string | null;
+};
+
+export type ProviderAccountDeletionStatus = {
+  ok: boolean;
+  has_pending: boolean;
+  request?: ProviderAccountDeletionRequest | null;
+};
+
 export type Provider = {
   id: UUID;
   full_name?: string;
@@ -159,10 +183,12 @@ export type Booking = {
   completion_notes?: string | null;
   notes?: string | null;
   address?: string | null;
+  commune?: string | null;
   comuna?: string | null;
   city?: string | null;
   latitude?: number | null;
   longitude?: number | null;
+  location?: BookingLocation | null;
 };
 
 export type CustomerBooking = Booking & {

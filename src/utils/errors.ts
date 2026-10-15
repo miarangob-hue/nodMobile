@@ -17,6 +17,10 @@ export function getFriendlyError(error: unknown, fallback = "Ocurrió un problem
     if (error.status === 403) return "No tienes permiso para realizar esta acción.";
     if (error.status === 404) return "No encontramos la información solicitada.";
     if (error.status === 409) return getApiMessage(error) ?? "Estos datos ya están registrados.";
+    if (error.status === 422 && (error.body as { error?: string } | null)?.error === "out_of_coverage") {
+      return "El prestador seleccionado no cubre esta zona o comuna. Selecciona un prestador cercano a tu ubicación.";
+    }
+    if (error.status === 422) return apiMessage ?? "Revisa la ubicación y los datos de la reserva.";
     if (error.status >= 500) {
       return apiMessage && !/internal server error|unexpected error|service unavailable/i.test(apiMessage)
         ? apiMessage

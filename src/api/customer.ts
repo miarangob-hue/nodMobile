@@ -304,28 +304,23 @@ export async function createBooking({
     body: {
       provider_id: providerId,
       service_id: serviceId,
+      pet_id: petId,
       starts_at: startsAt,
       ends_at: endsAt,
       price,
       currency: currency ?? "CLP",
-      notes: appendProviderBookingMetadata(notes, {
-        pet_id: petId,
-        pet_name: petName,
-        provider_name: providerName,
-        address,
-        comuna,
-        city,
-        latitude,
-        longitude,
-        price,
-        currency
-      })
+      address,
+      commune: comuna,
+      city,
+      latitude,
+      longitude,
+      notes: notes?.trim() || undefined
     },
     accessToken
   });
 
   const booking = getBookingFromResponse(response);
-  return booking ? hydrateProviderBookingMetadata({
+  return booking ? normalizeProviderBookingLocation(hydrateProviderBookingMetadata({
     ...booking,
     pet_id: booking.pet_id ?? petId,
     pet_name: booking.pet_name ?? petName,
@@ -335,7 +330,7 @@ export async function createBooking({
     city: booking.city ?? city,
     latitude: booking.latitude ?? latitude,
     longitude: booking.longitude ?? longitude
-  }) : undefined;
+  })) : undefined;
 }
 
 export async function cancelCustomerBooking({
@@ -560,11 +555,11 @@ function appendProviderBookingMetadata(notes: string | null | undefined, metadat
 
 function hydrateProviderBookingMetadata(booking: CustomerBooking) {
   const marker = booking.notes?.lastIndexOf(providerBookingMetadataPrefix) ?? -1;
-  if (marker < 0) return booking;
+  if (marker < 0) return normalizeProviderBookingLocation(booking);
 
   try {
     const metadata = JSON.parse(booking.notes!.slice(marker + providerBookingMetadataPrefix.length)) as ProviderBookingMetadata;
-    return {
+    return normalizeProviderBookingLocation({
       ...metadata,
       ...booking,
       pet_id: booking.pet_id ?? metadata.pet_id,
@@ -578,10 +573,24 @@ function hydrateProviderBookingMetadata(booking: CustomerBooking) {
       price: booking.price ?? metadata.price,
       currency: booking.currency ?? metadata.currency,
       notes: booking.notes!.slice(0, marker).trim() || null
-    };
+    });
   } catch {
     return booking;
   }
+}
+
+function normalizeProviderBookingLocation(booking: CustomerBooking): CustomerBooking {
+  const location = booking.location;
+  const commune = booking.commune ?? location?.commune ?? booking.comuna;
+  return {
+    ...booking,
+    address: booking.address ?? location?.address,
+    commune,
+    comuna: commune,
+    city: booking.city ?? location?.city,
+    latitude: booking.latitude ?? location?.latitude,
+    longitude: booking.longitude ?? location?.longitude
+  };
 }
 
 function hasOwn<T extends object, K extends PropertyKey>(value: T, key: K): value is T & Record<K, unknown> {
