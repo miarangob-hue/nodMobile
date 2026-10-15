@@ -139,7 +139,7 @@ export function RegisterScreen({ onBack, onRegistered }: Props) {
           <Text style={styles.stepHelp}>Validaremos el RUT chileno con módulo 11.</Text>
           <TextInput
             autoCorrect={false}
-            keyboardType={Platform.OS === "android" ? "visible-password" : "default"}
+            keyboardType="default"
             maxLength={12}
             onChangeText={(value) => setRut(formatChileanRut(value))}
             placeholder="RUT (12.345.678-5)"
@@ -150,7 +150,7 @@ export function RegisterScreen({ onBack, onRegistered }: Props) {
           {rut ? <Text style={isValidChileanRut(rut) ? styles.validText : styles.fieldError}>{isValidChileanRut(rut) ? "RUT válido" : "Revisa el guion y el dígito verificador"}</Text> : null}
           <TextInput
             autoCorrect={false}
-            keyboardType={Platform.OS === "android" ? "visible-password" : "default"}
+            keyboardType="default"
             onChangeText={setFirstName}
             placeholder="Nombre"
             showSoftInputOnFocus

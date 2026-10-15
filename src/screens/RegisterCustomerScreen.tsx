@@ -241,7 +241,7 @@ export function RegisterCustomerScreen({ onBack, onGoogleAuthenticated }: Props)
           <TextInput
             autoCapitalize="none"
             autoComplete="password"
-            keyboardType={Platform.OS === "android" ? "visible-password" : "default"}
+            keyboardType="default"
             onChangeText={setPassword}
             onFocus={() => revealField(470)}
             onSubmitEditing={() => confirmationRef.current?.focus()}
@@ -257,7 +257,7 @@ export function RegisterCustomerScreen({ onBack, onGoogleAuthenticated }: Props)
           <TextInput
             autoCapitalize="none"
             autoComplete="password"
-            keyboardType={Platform.OS === "android" ? "visible-password" : "default"}
+            keyboardType="default"
             onChangeText={setPasswordConfirmation}
             onFocus={() => revealField(550)}
             onSubmitEditing={continueAccessStep}

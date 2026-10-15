@@ -285,10 +285,11 @@ export function OnboardingScreen({ provider, session, onLogout, onSubmittedForRe
   if (!currentStep) {
     return (
       <View style={styles.centered}>
-        <Text style={styles.emptyTitle}>Sin pasos configurados</Text>
-        <Text style={styles.emptyText}>La API no retorno pasos de onboarding activos.</Text>
+        <Text style={styles.emptyTitle}>{error ? "No se pudo cargar el onboarding" : "Sin pasos configurados"}</Text>
+        <Text style={styles.emptyText}>{error ?? "La API no retornó pasos de onboarding activos."}</Text>
+        {error ? <Pressable onPress={() => void loadOnboarding()} style={styles.primaryButton}><Text style={styles.primaryText}>Reintentar</Text></Pressable> : null}
         <Pressable onPress={handleLogout} style={styles.secondaryButton}>
-          <Text style={styles.secondaryText}>Cerrar sesion</Text>
+          <Text style={styles.secondaryText}>Cerrar sesión</Text>
         </Pressable>
       </View>
     );

@@ -13,6 +13,9 @@
 
 ## Calidad y pruebas
 
+- [x] Recertificar registro Provider desde cero: cuenta nueva, login, 13 pasos, progreso/rechazos, guardado de categoría/paseador y persistencia (10/10).
+- [x] Corregir el contrato de onboarding Provider para enviar `provider_id` en lectura, rechazos y escritura; agregar regresión automatizada.
+- [x] Corregir campos de contraseña visibles en Android para los registros Customer y Provider.
 - [x] Incorporar pruebas unitarias para RUT, normalización de comunas y estados de reserva.
 - [x] Ejecutar prueba de integración de reserva, aceptación, inicio, tracking, pausa, reanudación y cierre en Provider.
 - [x] Certificar el ciclo interno Provider directo: crear, aceptar, iniciar, tracking, pausar, reanudar y completar.

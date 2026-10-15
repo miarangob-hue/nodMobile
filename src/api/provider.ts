@@ -471,6 +471,7 @@ export async function updateProviderServiceZones({
   await apiRequest("/submit-provider-onboarding", {
     method: "POST",
     body: {
+      provider_id: providerId,
       step_key: "cat_dog_walker",
       answers: { dog_walker_zones: activeZones },
       status: "pending",

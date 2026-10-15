@@ -5,6 +5,7 @@ import { createHostingBooking, searchHosting } from "./hosting";
 import { cancelProviderAccountDeletion, confirmProviderAccountDeletion, getProviderAccountDeletion, getProviderBalance, requestProviderAccountDeletion, sendChatMessage } from "./provider";
 import { createMercadoPagoCheckout, createWalletTopUp, getBookingPayment, payBookingWithNodCredits } from "./payments";
 import { ApiError } from "./client";
+import { getProviderOnboarding, getProviderRejections, submitProviderOnboarding } from "./onboarding";
 import { getFriendlyError } from "../utils/errors";
 
 function mockJsonResponse(body: unknown) {
@@ -20,6 +21,31 @@ function mockJsonResponse(body: unknown) {
 afterEach(() => vi.unstubAllGlobals());
 
 describe("session-scoped backend contracts", () => {
+  it("sends provider_id when loading onboarding and rejection details", async () => {
+    const fetchMock = mockJsonResponse({ provider: { id: "provider-id" }, steps: [] });
+
+    await getProviderOnboarding("provider-id", "provider-token");
+    await getProviderRejections("provider-id", "provider-token");
+
+    expect(fetchMock.mock.calls).toHaveLength(2);
+    expect(fetchMock.mock.calls[0][0]).toContain("/get-provider-onboarding?provider_id=provider-id");
+    expect(fetchMock.mock.calls[1][0]).toContain("/get-provider-rejections?provider_id=provider-id");
+    expect(fetchMock.mock.calls.every(([, options]) => options.headers.Authorization === "Bearer provider-token")).toBe(true);
+  });
+
+  it("keeps provider_id when saving onboarding", async () => {
+    const fetchMock = mockJsonResponse({ provider_id: "provider-id", step: null, status: "completed" });
+
+    await submitProviderOnboarding({
+      provider_id: "provider-id",
+      step_key: "category",
+      answers: { service_category: ["dog_walker"] },
+      status: "completed",
+      submit_for_review: false
+    }, "provider-token");
+
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toMatchObject({ provider_id: "provider-id", step_key: "category" });
+  });
   it("shows a specific message when a booking is outside provider coverage", () => {
     const message = getFriendlyError(new ApiError(422, { error: "out_of_coverage", message: "backend detail" }));
     expect(message).toContain("no cubre esta zona");

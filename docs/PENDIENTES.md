@@ -1,6 +1,6 @@
 # Pendientes de NOD Mobile
 
-Última actualización: 14 de octubre de 2026. Versión móvil: 1.0.29 (`versionCode 29`).
+Última actualización: 15 de octubre de 2026. Versión móvil: 1.0.29 (`versionCode 29`).
 
 ## Backend bloqueante
 
@@ -13,6 +13,8 @@
 - Eliminación Provider integrada: solicitar, consultar, cancelar y confirmar. El ciclo reversible pasó E2E y la cuenta QA quedó activa; falta ejecutar la confirmación irreversible solo en una cuenta desechable.
 - Regresión Housing tras el despliegue: búsqueda y detalle responden `200`, pero el UUID de servicio anterior devuelve `404 service_not_found`; el servicio de alojamiento del catálogo también devuelve `404`, y el contrato con `hosting_profile_id` devuelve `422 out_of_coverage` aunque el informe declara que Housing está exento. Mobile ya envía `hosting_profile_id` y la ubicación del anfitrión.
 - El proveedor QA `pabloxp@gmail.com` mantiene su perfil Housing activo, pero actualmente devuelve cero precios/servicios asociados. La validación estricta impide repetir con esa cuenta el ciclo operativo hasta restaurar la asociación; las reservas normales y pagos se certificaron con una combinación válida del catálogo.
+- Onboarding Provider corregido: Mobile incluye `provider_id` en progreso, rechazos y guardado. Una cuenta nueva aprobó 10/10 en registro, login, carga de 13 pasos, guardado de categoría/paseador y persistencia. Falta la revisión final con documentos reales.
+- Los campos de clave y confirmación de los registros Customer/Provider ya no usan `visible-password` en Android y permanecen enmascarados.
 
 ## Notificaciones e integraciones
 
@@ -41,13 +43,14 @@
 
 ## Pruebas finales
 
-- Resultado funcional previo: **38/38**. Recertificación posterior al despliegue del 14-10: **30/32**; fallan exclusivamente creación y visibilidad Housing porque no se genera la reserva. Registro, mascotas, Discovery, match/chat, comunidad, reserva normal y chat normal siguen aprobados.
+- Regresión Customer del 15-10: **30/32** con dos cuentas nuevas; fallan exclusivamente creación y visibilidad Housing porque no se genera la reserva. Registro, login, mascotas, Discovery, match/chat, comunidad, reserva normal y chat normal siguen aprobados.
+- Regresión Provider del 15-10: **10/10** desde una cuenta nueva hasta persistencia de onboarding. No se envió a revisión final por ausencia de documentos reales.
 - Ciclo Provider aprobado: crear, visualizar, aceptar, iniciar, registrar GPS, pausar, reanudar, completar y consultar detalle, timeline, ETA, ruta y fotos.
 - Auditoría de contratos: **74/79** responden. Los cinco ausentes corresponden a `/hosting/*` de Customer API, retirados y reemplazados por las rutas Provider que Mobile utiliza y que pasaron E2E.
 - Regresión autenticada de lectura: **15/15** consultas Customer/Provider respondieron correctamente.
 - Perfil histórico QA reparado: faltaba publicar el perfil social; después de crear perfil y foto principal, Discovery respondió `200` con cinco candidatos.
 - Gamificación recertificada: estadísticas, catálogo de 10 medallas y rankings global/mensual/semanal/por comuna respondieron `200`; la actividad E2E persistió 13 puntos, nivel Cachorro, una medalla y posición 2.
-- Validación local aprobada: TypeScript sin errores y **37/37** pruebas automatizadas.
+- Validación local aprobada: TypeScript sin errores y **39/39** pruebas automatizadas.
 - Eliminación Provider reversible aprobada: solicitud `201`, consulta `200`, cancelación `200` y cuenta activa; confirmación inválida `400`. Falta el borrado irreversible con una cuenta desechable.
 - Pagos Provider: consulta inicial `unpaid`, checkout sandbox `201`, consulta posterior `pending`; falta completar pago sandbox y comprobar `paid` por webhook.
 - Eliminación Customer reversible aprobada: crear, consultar y cancelar. Falta ejecutar eliminación/anonimización definitiva en una cuenta desechable.

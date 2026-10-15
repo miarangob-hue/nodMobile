@@ -30,13 +30,15 @@ Android y iOS comparten el código funcional y la versión pública `1.0.29`. La
 - Wallet, pagos con Créditos NOD y flujo de Mercado Pago.
 - Solicitud autenticada de eliminación de cuentas de cliente.
 
-La validación local actual ejecuta **37 pruebas** y TypeScript sin errores. La certificación E2E más reciente se realizó contra los backends desplegados después de la centralización de reservas, la integración de pagos con `provider_bookings` y la actualización Provider del 14 de octubre.
+La validación local actual ejecuta **39 pruebas** y TypeScript sin errores. La certificación E2E más reciente se realizó el 15 de octubre contra los backends desplegados, incluyendo registros Customer y Provider completamente nuevos.
 
-### Matriz E2E — 14 de octubre de 2026
+### Matriz E2E — 15 de octubre de 2026
 
 | Área | Resultado | Evidencia |
 |---|---|---|
 | Login Customer y Provider | Aprobado | Ambas sesiones respondieron `200` |
+| Registro Provider y carga de onboarding | Aprobado | Cuenta nueva `201`, login `200`, 13 pasos activos, progreso y rechazos `200` |
+| Guardado de onboarding Provider | Aprobado | Categoría y datos de paseador guardados y recuperados `200`; Mobile envía `provider_id` en lectura, rechazos y escritura |
 | Perfil, mascotas y ficha médica | Aprobado | Lectura autenticada `200` |
 | Dating y match mutuo | Aprobado | Dos perfiles nuevos completaron Discovery, likes mutuos, match y chat; el perfil histórico QA fue reparado y Discovery volvió a responder `200` |
 | Chat de match entre mascotas | Aprobado | Mensaje creado `201` y recibido por el segundo perfil `200` |
@@ -54,9 +56,9 @@ La validación local actual ejecuta **37 pruebas** y TypeScript sin errores. La 
 | Eliminación de cuenta Provider | Aprobado reversible | Solicitud `201`, consulta pendiente `200`, cancelación `200`; texto de confirmación inválido `400`. No se ejecutó el borrado irreversible de la cuenta QA |
 | Páginas legales | Aprobado | Privacidad, términos y eliminación responden `200` |
 
-La certificación del 13 de octubre obtuvo **38/38 comprobaciones**. Tras el despliegue Provider del 14 de octubre, la recertificación obtuvo **30/32**: registro, mascotas, Discovery, match/chat, comunidad y reserva normal siguen aprobados, pero la creación Housing y su visibilidad quedan bloqueadas por la regresión descrita arriba. El ciclo operativo adicional aprobó creación, visibilidad, aceptación, inicio, GPS, pausa, reanudación, finalización, detalle, timeline, ETA, ruta y fotos.
+La regresión Customer repetida el 15 de octubre obtuvo **30/32** con dos cuentas nuevas: registro, login, mascotas, perfiles sociales, Discovery, match/chat, comunidad, reserva normal y chat aprobaron. La creación Housing sigue respondiendo `422 out_of_coverage`, por lo que tampoco puede comprobarse su visibilidad. La regresión Provider con una cuenta nueva obtuvo **10/10** en registro, login, catálogo, progreso, rechazos, guardado y persistencia de onboarding. No se envió esa cuenta a revisión final porque faltan documentos reales.
 
-La auditoría general repetida el 14 de octubre obtuvo **74/79 contratos respondiendo**. Los cinco ausentes son las rutas Housing antiguas de Customer API (`/hosting/*`), retiradas intencionalmente después de centralizar el flujo en Provider API; no son dependencias de Mobile. Una regresión autenticada adicional aprobó **15/15** lecturas de Customer y Provider. La mascota del perfil histórico QA no tenía perfil social publicado: se reconstruyó el perfil, se agregó foto principal y `GET /discovery/candidates` pasó de `404` a `200` con candidatos.
+La auditoría general repetida el 15 de octubre obtuvo **74/79 contratos respondiendo**. Los cinco ausentes son las rutas Housing antiguas de Customer API (`/hosting/*`), retiradas intencionalmente después de centralizar el flujo en Provider API; no son dependencias de Mobile. La regresión autenticada adicional aprobó **15/15** lecturas de Customer y Provider.
 
 El smoke Android instaló `NOD-1.0.29-android-v29.apk` en el AVD `NOD_Pixel`, confirmó `versionName 1.0.29`, `versionCode 29` y el arranque del proceso `com.nod.mobile`. La revisión visual anterior también aprobó `MainActivity`, onboarding, Login, selector de rol, formulario, teclado y botón Google. Al pulsar Google, la app informa correctamente que falta `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`; no es posible completar OAuth ni push hasta cargar Client IDs, proyecto EAS y archivos FCM/APNs.
 
@@ -78,6 +80,7 @@ La gamificación persistente también quedó recertificada: después de publicar
 - Payments ya consulta las reservas de Provider: Mobile normaliza `init_point`, `sandbox_init_point` y `payment_status`, y usa idempotencia al pagar con Créditos NOD.
 - Las reservas envían ubicación estructurada (`address`, `commune`, `city`, `latitude`, `longitude`) y conservan el fallback desde `notes` solo para registros históricos.
 - Provider dispone en Ajustes del flujo dedicado para programar, consultar, cancelar y confirmar la eliminación de cuenta.
+- El onboarding Provider vuelve a enviar el `provider_id` exigido por el backend al consultar progreso/rechazos y al guardar pasos. Los campos de clave Customer y Provider usan teclado seguro en Android y permanecen enmascarados.
 - FCM/APNs, confirmación final de pagos sandbox, payouts y la ejecución irreversible de eliminación requieren certificación con servicios externos o cuentas desechables.
 
 ## TO-DO
