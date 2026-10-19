@@ -68,6 +68,7 @@ describe("session-scoped backend contracts", () => {
     await createBooking({
       customerId: "untrusted-customer-id",
       providerId: "selected-provider-id",
+      petId: "pet-id",
       startsAt: "2026-10-10T10:00:00.000Z",
       endsAt: "2026-10-10T11:00:00.000Z",
       address: "Av. Providencia 1234",
@@ -84,6 +85,8 @@ describe("session-scoped backend contracts", () => {
     expect(url).toContain("/create-booking-request");
     expect(body.customer_id).toBeUndefined();
     expect(body.provider_id).toBe("selected-provider-id");
+    expect(body.pet_id).toBe("pet-id");
+    expect(body.pet_ids).toEqual(["pet-id"]);
     expect(body).toMatchObject({
       address: "Av. Providencia 1234",
       commune: "Providencia",
@@ -183,6 +186,7 @@ describe("session-scoped backend contracts", () => {
     expect(body.customer_id).toBeUndefined();
     expect(body.service_id).toBeUndefined();
     expect(body.hosting_profile_id).toBe("host-id");
+    expect(body.pet_ids).toEqual(["pet-id"]);
     expect(body.commune).toBe("Providencia");
     expect(body.payment_status).toBeUndefined();
     expect(options.headers.Authorization).toBe("Bearer customer-token");

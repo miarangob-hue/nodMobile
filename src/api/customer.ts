@@ -305,6 +305,7 @@ export async function createBooking({
       provider_id: providerId,
       service_id: serviceId,
       pet_id: petId,
+      pet_ids: petId ? [petId] : [],
       starts_at: startsAt,
       ends_at: endsAt,
       price,

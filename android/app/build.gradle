@@ -80,6 +80,11 @@ def enableMinifyInReleaseBuilds = (findProperty('android.enableMinifyInReleaseBu
  * this variant is about 6MiB larger per architecture than default.
  */
 def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
+def nodUploadStoreFile = System.getenv('NOD_UPLOAD_STORE_FILE')
+def nodUploadStorePassword = System.getenv('NOD_UPLOAD_STORE_PASSWORD')
+def nodUploadKeyAlias = System.getenv('NOD_UPLOAD_KEY_ALIAS')
+def nodUploadKeyPassword = System.getenv('NOD_UPLOAD_KEY_PASSWORD')
+def hasProductionSigning = [nodUploadStoreFile, nodUploadStorePassword, nodUploadKeyAlias, nodUploadKeyPassword].every { it }
 
 android {
     ndkVersion rootProject.ext.ndkVersion
@@ -92,8 +97,8 @@ android {
         applicationId 'com.nod.mobile'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 29
-        versionName "1.0.29"
+        versionCode 30
+        versionName "1.0.30"
 
         buildConfigField "String", "REACT_NATIVE_RELEASE_LEVEL", "\"${findProperty('reactNativeReleaseLevel') ?: 'stable'}\""
     }
@@ -104,15 +109,21 @@ android {
             keyAlias 'androiddebugkey'
             keyPassword 'android'
         }
+        if (hasProductionSigning) {
+            release {
+                storeFile file(nodUploadStoreFile)
+                storePassword nodUploadStorePassword
+                keyAlias nodUploadKeyAlias
+                keyPassword nodUploadKeyPassword
+            }
+        }
     }
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
         }
         release {
-            // Caution! In production, you need to generate your own keystore file.
-            // see https://reactnative.dev/docs/signed-apk-android.
-            signingConfig signingConfigs.debug
+            signingConfig hasProductionSigning ? signingConfigs.release : signingConfigs.debug
             def enableShrinkResources = findProperty('android.enableShrinkResourcesInReleaseBuilds') ?: 'false'
             shrinkResources enableShrinkResources.toBoolean()
             minifyEnabled enableMinifyInReleaseBuilds

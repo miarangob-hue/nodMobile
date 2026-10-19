@@ -54,6 +54,7 @@ export async function createHostingBooking({ hostingProfileId, providerId, custo
     body: {
       provider_id: providerId,
       hosting_profile_id: hostingProfileId,
+      pet_ids: petIds,
       price,
       currency,
       starts_at: new Date(`${checkIn}T14:00:00`).toISOString(),
@@ -73,7 +74,7 @@ export async function createHostingBooking({ hostingProfileId, providerId, custo
 export async function getMyHostingBookings(customerId: string, accessToken?: string | null) {
   const response = await apiRequest<{ bookings?: Record<string, unknown>[]; data?: Record<string, unknown>[] } | Record<string, unknown>[]>("/get-customer-bookings", { query: { customer_id: customerId }, accessToken });
   const items = Array.isArray(response) ? response : response.bookings ?? response.data ?? [];
-  return items.filter((item) => item.service_id === HOSTING_SERVICE_ID || String(item.notes ?? "").includes("hosting_profile_id=")).map(normalizeHostingBooking);
+  return items.filter((item) => item.is_hosting === true || Boolean(item.hosting_profile) || Boolean(item.hosting_profile_id) || item.service_id === HOSTING_SERVICE_ID || String(item.notes ?? "").includes("hosting_profile_id=")).map(normalizeHostingBooking);
 }
 
 export async function updateHostingBookingStatus(bookingId: string, status: "CONFIRMED" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED", accessToken?: string | null) {
@@ -84,6 +85,7 @@ export async function updateHostingBookingStatus(bookingId: string, status: "CON
 }
 
 function normalizeHostingBooking(raw: Record<string, unknown>): HostingBooking {
+  const hostingProfile = raw.hosting_profile && typeof raw.hosting_profile === "object" ? raw.hosting_profile as Record<string, unknown> : null;
   return {
     id: String(raw.id ?? raw.booking_id ?? raw.reservation_id ?? ""),
     status: String(raw.status ?? "pending"),
@@ -91,8 +93,8 @@ function normalizeHostingBooking(raw: Record<string, unknown>): HostingBooking {
     currency: String(raw.currency ?? "CLP"),
     check_in: String(raw.check_in ?? raw.starts_at ?? ""),
     check_out: String(raw.check_out ?? raw.ends_at ?? ""),
-    hosting_profile_id: typeof raw.hosting_profile_id === "string" ? raw.hosting_profile_id : extractNoteValue(raw.notes, "hosting_profile_id"),
-    host_name: typeof raw.host_name === "string" ? raw.host_name : typeof raw.provider_name === "string" ? raw.provider_name : undefined,
+    hosting_profile_id: typeof raw.hosting_profile_id === "string" ? raw.hosting_profile_id : typeof hostingProfile?.id === "string" ? hostingProfile.id : extractNoteValue(raw.notes, "hosting_profile_id"),
+    host_name: typeof raw.host_name === "string" ? raw.host_name : typeof hostingProfile?.host_name === "string" ? hostingProfile.host_name : typeof raw.provider_name === "string" ? raw.provider_name : undefined,
     pet_names: Array.isArray(raw.pet_names) ? raw.pet_names.map(String) : undefined
   };
 }

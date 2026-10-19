@@ -105,6 +105,7 @@ if (host?.id) {
   const housing = observe("housing booking with customer JWT", await call(providerBase, providerKey, "POST", "/create-booking-request", {
     provider_id: host.provider_id,
     hosting_profile_id: host.id,
+    pet_ids: [first.petId],
     price: Number(host.nightly_rate ?? 0) * nights,
     currency: host.currency ?? "CLP",
     starts_at: new Date(`${checkIn}T14:00:00`).toISOString(),
@@ -148,7 +149,7 @@ results.push({ name: "provider catalog", passed: Boolean(provider), status: prov
 if (provider?.id && serviceId) {
   const startsAt = new Date(Date.now() + 10 * 86400000).toISOString();
   const endsAt = new Date(Date.now() + 10 * 86400000 + 3600000).toISOString();
-  const bookingPayload = record("service booking", await call(providerBase, providerKey, "POST", "/create-booking-request", { provider_id: provider.id, service_id: serviceId, starts_at: startsAt, ends_at: endsAt, price: Number(provider.price_from ?? 0), currency: provider.currency ?? "CLP", address: "Av. Providencia 1234", commune: "Providencia", city: "Santiago", latitude: -33.4289, longitude: -70.6090, notes: `Reserva normal QA E2E; pet_id=${first.petId}` }, first.token));
+  const bookingPayload = record("service booking", await call(providerBase, providerKey, "POST", "/create-booking-request", { provider_id: provider.id, service_id: serviceId, pet_id: first.petId, pet_ids: [first.petId], starts_at: startsAt, ends_at: endsAt, price: Number(provider.price_from ?? 0), currency: provider.currency ?? "CLP", address: "Av. Providencia 1234", commune: "Providencia", city: "Santiago", latitude: -33.4289, longitude: -70.6090, notes: "Reserva normal QA E2E" }, first.token));
   serviceBookingId = (bookingPayload.booking ?? bookingPayload.reservation ?? bookingPayload).id;
   if (serviceBookingId) {
     observe("booking chat open", await call(providerBase, providerKey, "POST", "/get-or-create-booking-chat", { booking_id: serviceBookingId }, first.token));

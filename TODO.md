@@ -38,8 +38,9 @@
 - [x] Persistir puntos, niveles y medallas en backend e integrar perfil comunitario server-side.
 - [x] Integrar ranking comunitario global y por período; el contrato también admite filtro por comuna.
 - [x] Migrar Housing a Provider API como fuente única (`search-hosting`, `get-hosting-host`, `create-booking-request`, `get-customer-bookings`).
-- [ ] Recertificar Housing E2E: el despliegue del 14-10 mantiene búsqueda/detalle, pero `create-booking-request` rechaza el servicio anterior con `404` y `hosting_profile_id` con `422 out_of_coverage`.
-- [ ] Restaurar una asociación de servicio/precio para `pabloxp@gmail.com`; Provider devuelve actualmente cero precios y la validación estricta impide repetir con esa cuenta el ciclo operativo.
+- [x] Recertificar Housing E2E: búsqueda, detalle, creación `201`, listado, metadata, chat y cancelación aprobaron el 18-10.
+- [x] Restaurar asociaciones operativas de `pabloxp@gmail.com`: Customer lo lista como Paseador a $15.000 y Alojamiento/Guardería, con perfil Housing georreferenciado.
+- [ ] Alinear `/update-provider-pricing`: aún devuelve cero elementos para Pablo aunque Customer API expone correctamente sus asociaciones y precio de Paseador.
 - [x] Aceptar JWT Customer para crear y cancelar reservas Housing, infiriendo la identidad desde la sesión.
 - [x] Certificar chat de reservas Customer: crear/obtener, enviar, listar y marcar lectura.
 - [x] Incorporar borradores de privacidad, términos y solicitud autenticada de eliminación de cuenta.
@@ -52,7 +53,8 @@
 
 ## Publicación
 
-- [ ] Configurar firma Android de producción; actualmente el release local usa la firma de desarrollo.
+- [x] Configurar upload key Android de producción y generar el AAB firmado `1.0.30 (30)`; falta cargarlo y habilitar Play App Signing en Play Console.
+- [ ] Generar el AAB `1.0.31 (31)` con el ajuste final de `pet_ids`; el AAB v30 existente es anterior a esa corrección y no debe confundirse con el código recertificado.
 - [ ] Configurar certificados y perfiles de distribución iOS.
 - [ ] Preparar íconos, capturas, ficha de tienda y política de privacidad.
 - [ ] Completar la lista consolidada de [`docs/PENDIENTES.md`](docs/PENDIENTES.md).

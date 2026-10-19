@@ -1,18 +1,18 @@
 # Pendientes de NOD Mobile
 
-Última actualización: 15 de octubre de 2026. Versión móvil: 1.0.29 (`versionCode 29`).
+Última actualización: 18 de octubre de 2026. Versión móvil: 1.0.30 (`versionCode 30`).
 
 ## Backend bloqueante
 
 - Housing y chat ya validan JWT Customer junto con `x-api-key`. La app fue ajustada para inferir identidad al crear, enviar `customer_id` solo en la query de listado y usar `body` como contenido del mensaje.
-- Reservas normales y Housing ya usan Provider como fuente única. Creación, listado, chat y cancelación de reserva normal fueron recertificados E2E; en Housing solo búsqueda y detalle están aprobados porque la creación continúa bloqueada por la regresión descrita abajo.
+- Reservas normales y Housing usan Provider como fuente única. Ambos flujos aprobaron creación, listado, chat y cancelación E2E.
 - Validación de servicio recertificada: UUID inexistente responde `404 service_not_found`.
 - Cobertura geográfica recertificada: una reserva en Antártica para un proveedor de Providencia responde `422 out_of_coverage`.
 - Ubicación recertificada: dirección, `commune`, ciudad y coordenadas se conservan en creación y listado, también dentro de `location`. Mobile dejó de serializar estos campos en `notes`.
 - La validación de fechas y propiedad sí está activa: fecha pasada `400`, horario ocupado `409` y cancelación de reserva ajena `403`.
 - Eliminación Provider integrada: solicitar, consultar, cancelar y confirmar. El ciclo reversible pasó E2E y la cuenta QA quedó activa; falta ejecutar la confirmación irreversible solo en una cuenta desechable.
-- Regresión Housing tras el despliegue: búsqueda y detalle responden `200`, pero el UUID de servicio anterior devuelve `404 service_not_found`; el servicio de alojamiento del catálogo también devuelve `404`, y el contrato con `hosting_profile_id` devuelve `422 out_of_coverage` aunque el informe declara que Housing está exento. Mobile ya envía `hosting_profile_id` y la ubicación del anfitrión.
-- El proveedor QA `pabloxp@gmail.com` mantiene su perfil Housing activo, pero actualmente devuelve cero precios/servicios asociados. La validación estricta impide repetir con esa cuenta el ciclo operativo hasta restaurar la asociación; las reservas normales y pagos se certificaron con una combinación válida del catálogo.
+- Housing recertificado tras el despliegue: `hosting_profile_id` crea `201`; listado, detalle, metadata (`is_hosting`, `hosting_profile`, dirección y tarifa), chat y cancelación responden `200/201`. Mobile envía `pet_ids` formalmente.
+- El proveedor QA `pabloxp@gmail.com` aparece en Customer API asociado a Paseador ($15.000) y Alojamiento/Guardería; su perfil Housing expone Providencia y coordenadas. Queda una discrepancia de gestión: `/update-provider-pricing` responde `200` con cero elementos.
 - Onboarding Provider corregido: Mobile incluye `provider_id` en progreso, rechazos y guardado. Una cuenta nueva aprobó 10/10 en registro, login, carga de 13 pasos, guardado de categoría/paseador y persistencia. Falta la revisión final con documentos reales.
 - Los campos de clave y confirmación de los registros Customer/Provider ya no usan `visible-password` en Android y permanecen enmascarados.
 
@@ -33,7 +33,7 @@
 ## Publicación en tiendas
 
 - Sustituir claves y credenciales de desarrollo por secretos productivos y rotar las claves que hayan sido compartidas durante las pruebas.
-- Configurar firma Android de producción y generar el AAB destinado a Google Play.
+- Upload key Android creada y AAB `1.0.30 (30)` firmado/verificado. Ese bundle precede al ajuste final de `pet_ids`; generar `1.0.31 (31)` antes de la próxima publicación. Respaldar el keystore y su contraseña y habilitar Play App Signing.
 - Configurar certificados y perfiles de distribución iOS y generar el IPA.
 - Crear las aplicaciones en Google Play Console y App Store Connect.
 - Preparar capturas Android/iPhone, descripción, categoría, clasificación de contenido, soporte y material gráfico.
@@ -43,10 +43,10 @@
 
 ## Pruebas finales
 
-- Regresión Customer del 15-10: **30/32** con dos cuentas nuevas; fallan exclusivamente creación y visibilidad Housing porque no se genera la reserva. Registro, login, mascotas, Discovery, match/chat, comunidad, reserva normal y chat normal siguen aprobados.
-- Regresión Provider del 15-10: **10/10** desde una cuenta nueva hasta persistencia de onboarding. No se envió a revisión final por ausencia de documentos reales.
+- Regresión Customer del 18-10: **38/38** con dos cuentas nuevas; registro, login, mascotas, Discovery, match/chat, comunidad, Housing/chat y reserva normal/chat aprobaron. Las reservas creadas fueron canceladas al finalizar.
+- Regresión Provider del 18-10: **10/10** desde una cuenta nueva hasta persistencia de onboarding. No se envió a revisión final por ausencia de documentos reales.
 - Ciclo Provider aprobado: crear, visualizar, aceptar, iniciar, registrar GPS, pausar, reanudar, completar y consultar detalle, timeline, ETA, ruta y fotos.
-- Auditoría de contratos: **74/79** responden. Los cinco ausentes corresponden a `/hosting/*` de Customer API, retirados y reemplazados por las rutas Provider que Mobile utiliza y que pasaron E2E.
+- Auditoría de contratos activos del 18-10: **74/74** responden. Las cinco rutas `/hosting/*` antiguas de Customer API fueron retiradas del barrido porque están deprecadas y Mobile usa las rutas Provider recertificadas.
 - Regresión autenticada de lectura: **15/15** consultas Customer/Provider respondieron correctamente.
 - Perfil histórico QA reparado: faltaba publicar el perfil social; después de crear perfil y foto principal, Discovery respondió `200` con cinco candidatos.
 - Gamificación recertificada: estadísticas, catálogo de 10 medallas y rankings global/mensual/semanal/por comuna respondieron `200`; la actividad E2E persistió 13 puntos, nivel Cachorro, una medalla y posición 2.
@@ -58,7 +58,7 @@
 - Completar una regresión residencial desde dispositivo físico, incluyendo UI, confirmación del proveedor, chat y cancelación.
 - Certificar pago sandbox final, moderación administrativa y eliminación definitiva de cuentas.
 - Realizar pruebas de accesibilidad con tamaños de texto grandes y lectores de pantalla.
-- Smoke Android v29 aprobado en `NOD_Pixel`: `NOD-1.0.29-android-v29.apk` se instaló, reportó `versionName 1.0.29`/`versionCode 29` y arrancó `com.nod.mobile`. Onboarding, Login, selector de rol, teclado y formulario ya tenían smoke visual aprobado; Google mantiene el bloqueo esperado por Client ID ausente.
+- Smoke Android v30 aprobado en `NOD_Pixel`: `NOD-1.0.30-android-v30.apk` se instaló, reportó `versionName 1.0.30`/`versionCode 30` y arrancó `com.nod.mobile`. Incluye la corrección del onboarding Provider; Google mantiene el bloqueo esperado por Client ID ausente.
 - Exports JavaScript Android e iOS aprobados; siguen pendientes IPA firmado y pruebas iOS nativas por ausencia de certificados, provisioning y OAuth/APNs.
 
 ## Mejoras no bloqueantes

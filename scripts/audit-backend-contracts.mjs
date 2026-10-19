@@ -44,13 +44,6 @@ const checks = [
   ["customer", "checkout Mercado Pago", "POST", "/payments/checkout", { booking_id: missing }],
   ["customer", "estado pago reserva", "GET", `/payments/bookings/${missing}`],
 
-  // Residencial
-  ["customer", "buscar residencial", "GET", "/hosting/search?comuna=Providencia&pets=1"],
-  ["customer", "detalle residencial", "GET", `/hosting/hosts/${missing}`],
-  ["customer", "crear reserva residencial", "POST", "/hosting/bookings", { hosting_profile_id: missing, customer_id: missing, check_in: "2026-10-10", check_out: "2026-10-11", pet_ids: [missing] }],
-  ["customer", "mis estadías", "GET", "/hosting/bookings/my-bookings"],
-  ["customer", "estado estadía", "PUT", `/hosting/bookings/${missing}/status`, { status: "CANCELLED" }],
-
   // Comunidad
   ["customer", "feed comunidad", "GET", `/feed?filter=for_you&user_id=${missing}&pet_type=all&page=1&limit=1`],
   ["customer", "crear publicación", "POST", "/posts", { caption: "QA", pet_type: "dog" }],
