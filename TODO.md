@@ -38,9 +38,11 @@
 - [x] Persistir puntos, niveles y medallas en backend e integrar perfil comunitario server-side.
 - [x] Integrar ranking comunitario global y por período; el contrato también admite filtro por comuna.
 - [x] Migrar Housing a Provider API como fuente única (`search-hosting`, `get-hosting-host`, `create-booking-request`, `get-customer-bookings`).
-- [x] Recertificar Housing E2E: búsqueda, detalle, creación `201`, listado, metadata, chat y cancelación aprobaron el 18-10.
+- [x] Recertificar Housing E2E: búsqueda, detalle, creación `201`, listado, metadata, chat y cancelación aprobaron nuevamente el 20-10.
 - [x] Restaurar asociaciones operativas de `pabloxp@gmail.com`: Customer lo lista como Paseador a $15.000 y Alojamiento/Guardería, con perfil Housing georreferenciado.
-- [ ] Alinear `/update-provider-pricing`: aún devuelve cero elementos para Pablo aunque Customer API expone correctamente sus asociaciones y precio de Paseador.
+- [x] Alinear backend de tarifas: `/update-provider-pricing` y `/get-provider-pricing` devuelven las dos tarifas consolidadas de Pablo desde catálogo y Housing.
+- [ ] Consumir `/get-provider-pricing` desde el detalle Customer, ampliar los tipos de fuente/tarifa y agregar edición Provider mediante `POST/PATCH /update-provider-pricing`.
+- [ ] Publicar/corregir el proxy Customer `contract-api`; la URL Lovable documentada devuelve HTML y la API Customer actual responde `404` para esa ruta.
 - [x] Aceptar JWT Customer para crear y cancelar reservas Housing, infiriendo la identidad desde la sesión.
 - [x] Certificar chat de reservas Customer: crear/obtener, enviar, listar y marcar lectura.
 - [x] Incorporar borradores de privacidad, términos y solicitud autenticada de eliminación de cuenta.
@@ -54,7 +56,7 @@
 ## Publicación
 
 - [x] Configurar upload key Android de producción y generar el AAB firmado `1.0.30 (30)`; falta cargarlo y habilitar Play App Signing en Play Console.
-- [ ] Generar el AAB `1.0.31 (31)` con el ajuste final de `pet_ids`; el AAB v30 existente es anterior a esa corrección y no debe confundirse con el código recertificado.
+- [x] Generar y verificar el APK y AAB `1.0.31 (31)` con el ajuste final de `pet_ids`; falta subir el AAB a la pista correspondiente de Google Play.
 - [ ] Configurar certificados y perfiles de distribución iOS.
 - [ ] Preparar íconos, capturas, ficha de tienda y política de privacidad.
 - [ ] Completar la lista consolidada de [`docs/PENDIENTES.md`](docs/PENDIENTES.md).

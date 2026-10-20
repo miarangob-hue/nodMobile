@@ -8,10 +8,10 @@ Aplicación móvil de NOD para clientes y proveedores de servicios de mascotas. 
 
 | Plataforma | Versión | Build | Identificador | Estado |
 |---|---:|---:|---|---|
-| Android | `1.0.30` | `versionCode 30` | `com.nod.mobile` | APK release de QA generado, instalado y verificado |
-| iOS | `1.0.30` | `buildNumber 1` | `com.nod.mobile` | Configurado en Expo; IPA y distribución pendientes |
+| Android | `1.0.31` | `versionCode 31` | `com.nod.mobile` | APK y AAB release de producción generados y firmados |
+| iOS | `1.0.31` | `buildNumber 1` | `com.nod.mobile` | Configurado en Expo; IPA y distribución pendientes |
 
-Android y iOS comparten el código funcional y la versión pública `1.0.30`. La compilación Android fue validada localmente; la versión iOS todavía debe compilarse y probarse en Xcode/EAS con certificados, provisioning profile, APNs y credenciales OAuth de iOS.
+Android y iOS comparten el código funcional y la versión pública `1.0.31`. La compilación Android fue validada localmente; la versión iOS todavía debe compilarse y probarse en Xcode/EAS con certificados, provisioning profile, APNs y credenciales OAuth de iOS.
 
 ## Estado funcional
 
@@ -30,9 +30,9 @@ Android y iOS comparten el código funcional y la versión pública `1.0.30`. La
 - Wallet, pagos con Créditos NOD y flujo de Mercado Pago.
 - Solicitud autenticada de eliminación de cuentas de cliente.
 
-La validación local actual ejecuta **39 pruebas** y TypeScript sin errores. La certificación E2E más reciente se realizó el 18 de octubre contra los backends desplegados, incluyendo registros Customer y Provider completamente nuevos.
+La validación local actual ejecuta **39 pruebas** y TypeScript sin errores. La certificación E2E más reciente se realizó el 20 de octubre contra los backends desplegados, incluyendo registros Customer y Provider completamente nuevos.
 
-### Matriz E2E — 18 de octubre de 2026
+### Matriz E2E — 20 de octubre de 2026
 
 | Área | Resultado | Evidencia |
 |---|---|---|
@@ -48,6 +48,7 @@ La validación local actual ejecuta **39 pruebas** y TypeScript sin errores. La 
 | Chat de reserva de servicio | Aprobado tras corrección P0 | Customer crea/abre chat, envía con `body`, lista y marca lectura con `200/201` |
 | Housing: búsqueda y ficha | Aprobado | `/search-hosting` y `/get-hosting-host` responden `200` con disponibilidad |
 | Housing: reserva | Aprobado | Creación `201`, listado/detalle `200`, metadata residencial, chat y cancelación `200/201` usando `hosting_profile_id` y `pet_ids` |
+| Tarifas Provider unificadas | Backend aprobado | Pablo devuelve Paseador `$15.000` desde `provider_catalog_prices` y Housing `$25.000` desde `hosting_profiles` tanto en `/update-provider-pricing` como en `/get-provider-pricing` |
 | Wallet, compras y notificaciones Customer | Aprobado | Consultas autenticadas `200` |
 | Pagos Provider + Mercado Pago | Aprobado hasta checkout | Reserva Provider reconocida; estado `unpaid` → checkout `201` → `pending`; falta completar una tarjeta sandbox y validar webhook `paid` |
 | Créditos NOD | Aprobado sin saldo | Wallet y paquetes `200`; débito sin saldo responde `402 insufficient_credits`; falta certificar débito exitoso e idempotente con saldo |
@@ -56,9 +57,9 @@ La validación local actual ejecuta **39 pruebas** y TypeScript sin errores. La 
 | Eliminación de cuenta Provider | Aprobado reversible | Solicitud `201`, consulta pendiente `200`, cancelación `200`; texto de confirmación inválido `400`. No se ejecutó el borrado irreversible de la cuenta QA |
 | Páginas legales | Aprobado | Privacidad, términos y eliminación responden `200` |
 
-La regresión Customer repetida el 18 de octubre obtuvo **38/38** con dos cuentas nuevas: registro, login, mascotas, perfiles sociales, Discovery, match/chat, comunidad, Housing con chat y reserva normal con chat aprobaron. Las reservas Housing y normal fueron canceladas al finalizar. La app envía ahora `pet_ids` formalmente en ambos flujos, además de `pet_id` por compatibilidad en reservas normales.
+La regresión Customer repetida el 20 de octubre obtuvo **38/38** con dos cuentas nuevas: registro, login, mascotas, perfiles sociales, Discovery, match/chat, comunidad, Housing con chat y reserva normal con chat aprobaron. Las reservas Housing y normal fueron canceladas al finalizar. La app envía ahora `pet_ids` formalmente en ambos flujos, además de `pet_id` por compatibilidad en reservas normales.
 
-La auditoría general repetida el 18 de octubre obtuvo **74/74 contratos activos respondiendo**. Se retiraron del barrido las cinco rutas Housing antiguas de Customer API (`/hosting/*`), deprecadas después de centralizar el flujo en Provider API. La regresión autenticada adicional aprobó **15/15** lecturas de Customer y Provider y el registro Provider nuevo aprobó **10/10**.
+La auditoría general repetida el 20 de octubre obtuvo **74/74 contratos activos respondiendo**. Se retiraron del barrido las cinco rutas Housing antiguas de Customer API (`/hosting/*`), deprecadas después de centralizar el flujo en Provider API. La regresión autenticada adicional aprobó **15/15** lecturas de Customer y Provider —incluidas dos tarifas consolidadas— y el registro Provider nuevo aprobó **10/10**.
 
 El smoke Android instaló `NOD-1.0.30-android-v30.apk` en el AVD `NOD_Pixel`, confirmó `versionName 1.0.30`, `versionCode 30` y el arranque de `com.nod.mobile`. Este artefacto incluye la corrección del onboarding Provider. La revisión visual también aprobó `MainActivity`, onboarding, Login, selector de rol, formulario, teclado y botón Google. Al pulsar Google, la app informa correctamente que falta `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`; no es posible completar OAuth ni push hasta cargar Client IDs, proyecto EAS y archivos FCM/APNs.
 
@@ -74,7 +75,8 @@ La gamificación persistente también quedó recertificada: después de publicar
 
 - Todas las reservas usan Provider API como fuente única: `/create-booking-request`, `/get-customer-bookings` y `/cancel-booking`; Housing agrega `/search-hosting` y `/get-hosting-host`.
 - El proveedor `pabloxp@gmail.com` tiene un perfil residencial activo en Provider API (`NOD Residencial QA`, Providencia, $25.000 por noche).
-- Pablo vuelve a aparecer en Customer API para Paseador (`$15.000`) y Alojamiento/Guardería; su perfil Housing expone las coordenadas de Providencia. El endpoint Provider `/update-provider-pricing` todavía devuelve una lista vacía, aunque las asociaciones operativas del catálogo ya funcionan.
+- La unificación de tarifas de Pablo quedó operativa: `/update-provider-pricing` y `/get-provider-pricing` devuelven Paseador (`$15.000`, `provider_catalog_prices`) y Alojamiento/Guardería (`$25.000`, `hosting_profiles`). Mobile todavía debe consumir `/get-provider-pricing` en el detalle Customer y permitir edición `POST/PATCH` en Provider.
+- El proxy `contract-api` indicado en el informe de tarifas no está disponible como JSON en la URL publicada: la URL Lovable entrega HTML y `/contract-api` en la API Customer actual responde `404`. Mobile debe usar por ahora el endpoint Provider directo ya verificado.
 - Housing y chat de reservas ya aceptan conjuntamente `x-api-key` y JWT Customer. La identidad del cliente se obtiene del token y la app no envía `customer_id` al crear la reserva.
 - Customer API retiró `GET/POST /bookings` y `/bookings/:id/cancel`; la app ya no depende de esas rutas.
 - Payments ya consulta las reservas de Provider: Mobile normaliza `init_point`, `sandbox_init_point` y `payment_status`, y usa idempotencia al pagar con Créditos NOD.
@@ -190,7 +192,7 @@ JAVA_HOME=/ruta/al/jdk-17 \
 
 El `.aab` queda en `android/app/build/outputs/bundle/release/app-release.aab`. La upload key y sus contraseñas deben mantenerse fuera de Git, respaldarse en un gestor seguro y reutilizarse para las próximas versiones.
 
-El bundle verificado disponible localmente es `dist/NOD-1.0.30-android-v30-play.aab`, firmado con el alias `nod-upload`. Fue generado antes del ajuste final de `pet_ids`; por lo tanto, no representa el código recertificado en esta sección. La próxima publicación debe generarse con una versión y `versionCode` nuevos (previsto: `1.0.31 (31)`). Google Play App Signing debe habilitarse al crear la primera release.
+Los artefactos actuales son `dist/NOD-1.0.31-android-v31.apk` y `dist/NOD-1.0.31-android-v31-play.aab`. Ambos están firmados con el certificado de upload `nod-upload`; el APK declara `versionName 1.0.31`, `versionCode 31`, `minSdk 24` y `targetSdk 36`. Google Play App Signing debe estar habilitado para la publicación.
 
 Build remoto con EAS:
 
@@ -205,7 +207,7 @@ Para publicación se deben configurar `EAS_PROJECT_ID`, Firebase/Google Services
 La configuración iOS actual usa:
 
 - Bundle identifier: `com.nod.mobile`.
-- Versión: `1.0.30`.
+- Versión: `1.0.31`.
 - Build number: `1`.
 - Compatibilidad con iPhone y iPad.
 - Permisos declarados para cámara y ubicación.
