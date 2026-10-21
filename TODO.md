@@ -13,6 +13,8 @@
 
 ## Calidad y pruebas
 
+Última ejecución completa: **21 de octubre de 2026**. `npm run validate` pasó **39/39**; registro Provider **10/10**; E2E de dos Customer **38/38**; regresión autenticada **15/15**; auditoría de contratos **74/74**. Los E2E que requieren `NOD_E2E_HOSTING_PROFILE_ID`, proyecto/anon key y cuentas separadas no se ejecutaron en este checkout por configuración ausente; sus flujos equivalentes están cubiertos por `e2e-two-customers.mjs`.
+
 - [x] Recertificar registro Provider desde cero: cuenta nueva, login, 13 pasos, progreso/rechazos, guardado de categoría/paseador y persistencia (10/10).
 - [x] Corregir el contrato de onboarding Provider para enviar `provider_id` en lectura, rechazos y escritura; agregar regresión automatizada.
 - [x] Corregir campos de contraseña visibles en Android para los registros Customer y Provider.

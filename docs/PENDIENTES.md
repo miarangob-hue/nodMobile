@@ -1,10 +1,10 @@
 # Pendientes de NOD Mobile
 
-Última actualización: 20 de octubre de 2026. Código actual: `1.0.31` (`versionCode 31`).
+Última actualización: 21 de octubre de 2026. Código actual: `1.0.31` (`versionCode 31`).
 
 ## Resumen ejecutivo
 
-La funcionalidad principal está operativa: registro y login, mascotas, comunidad, match y chat, reservas normales, Housing y chat de reservas aprobaron las pruebas automatizadas y E2E. El trabajo pendiente se concentra en preparar una compilación publicable, configurar integraciones externas y validar en dispositivos reales.
+La funcionalidad principal está operativa: registro y login, mascotas, comunidad, match y chat, reservas normales, Housing y chat de reservas aprobaron las pruebas automatizadas y E2E. La ejecución del 21 de octubre pasó validación local **39/39**, registro Provider **10/10**, E2E de dos clientes **38/38**, regresión autenticada **15/15** y contratos **74/74**. El trabajo pendiente se concentra en preparar una compilación publicable, configurar integraciones externas y validar en dispositivos reales.
 
 Orden recomendado:
 
@@ -118,10 +118,11 @@ Falta probar lector de pantalla, tamaños de texto grandes, contraste, navegaci�
 
 No debe confundirse esta sección con trabajo pendiente:
 
-- **Customer E2E del 20-10: 38/38.** Dos cuentas nuevas completaron registro, login, mascotas, perfiles sociales, Discovery, match/chat, comunidad, Housing/chat y reserva normal/chat. Las reservas de prueba fueron canceladas.
-- **Provider nuevo del 20-10: 10/10.** Registro, login, 13 pasos activos, progreso, rechazos, guardado de categoría/paseador y persistencia.
-- **Lecturas autenticadas del 20-10: 15/15.** Las cuentas QA Customer y Provider accedieron correctamente a sus recursos; Pablo devolvió dos tarifas consolidadas.
-- **Contratos activos del 20-10: 74/74.** Las cinco rutas `/hosting/*` antiguas de Customer API quedaron fuera porque están deprecadas; Mobile usa Provider API.
+- **Customer E2E del 21-10: 38/38.** Dos cuentas nuevas completaron registro, login, mascotas, perfiles sociales, Discovery, match/chat, comunidad, Housing/chat y reserva normal/chat. Las reservas de prueba fueron canceladas.
+- **Provider nuevo del 21-10: 10/10.** Registro, login, 13 pasos activos, progreso, rechazos, guardado de categoría/paseador y persistencia.
+- **Lecturas autenticadas del 21-10: 15/15.** Las cuentas QA Customer y Provider accedieron correctamente a sus recursos; Pablo devolvió dos tarifas consolidadas.
+- **Contratos activos del 21-10: 74/74.** Las cinco rutas `/hosting/*` antiguas de Customer API quedaron fuera porque están deprecadas; Mobile usa Provider API.
+- **Cobertura pendiente de configuración:** `e2e-customer-community-hosting.mjs` y `e2e-residential-dating.mjs` no corrieron porque faltan secretos E2E específicos en este checkout; no se consideran fallos del backend.
 - **Tarifas unificadas:** los dos endpoints Provider devolvieron las mismas dos tarifas, con su fuente efectiva y el perfil Housing correspondiente.
 - **Validación local: 39/39.** TypeScript y pruebas automatizadas sin errores.
 - **Housing:** búsqueda, detalle, creación `201`, listado, metadata residencial, chat, lectura y cancelación aprobados. Mobile envía `hosting_profile_id` y `pet_ids`.

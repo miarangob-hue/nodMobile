@@ -30,9 +30,9 @@ Android y iOS comparten el código funcional y la versión pública `1.0.31`. La
 - Wallet, pagos con Créditos NOD y flujo de Mercado Pago.
 - Solicitud autenticada de eliminación de cuentas de cliente.
 
-La validación local actual ejecuta **39 pruebas** y TypeScript sin errores. La certificación E2E más reciente se realizó el 20 de octubre contra los backends desplegados, incluyendo registros Customer y Provider completamente nuevos.
+La validación local actual ejecuta **39 pruebas** y TypeScript sin errores. La certificación E2E fue repetida el **21 de octubre de 2026** contra los backends desplegados, incluyendo registros Customer y Provider completamente nuevos.
 
-### Matriz E2E — 20 de octubre de 2026
+### Matriz E2E — 21 de octubre de 2026
 
 | Área | Resultado | Evidencia |
 |---|---|---|
@@ -57,9 +57,11 @@ La validación local actual ejecuta **39 pruebas** y TypeScript sin errores. La 
 | Eliminación de cuenta Provider | Aprobado reversible | Solicitud `201`, consulta pendiente `200`, cancelación `200`; texto de confirmación inválido `400`. No se ejecutó el borrado irreversible de la cuenta QA |
 | Páginas legales | Aprobado | Privacidad, términos y eliminación responden `200` |
 
-La regresión Customer repetida el 20 de octubre obtuvo **38/38** con dos cuentas nuevas: registro, login, mascotas, perfiles sociales, Discovery, match/chat, comunidad, Housing con chat y reserva normal con chat aprobaron. Las reservas Housing y normal fueron canceladas al finalizar. La app envía ahora `pet_ids` formalmente en ambos flujos, además de `pet_id` por compatibilidad en reservas normales.
+La regresión Customer repetida el 21 de octubre obtuvo **38/38** con dos cuentas nuevas: registro, login, mascotas, perfiles sociales, Discovery, match/chat, comunidad, Housing con chat y reserva normal con chat aprobaron. Las reservas Housing y normal fueron canceladas al finalizar. La app envía ahora `pet_ids` formalmente en ambos flujos, además de `pet_id` por compatibilidad en reservas normales.
 
-La auditoría general repetida el 20 de octubre obtuvo **74/74 contratos activos respondiendo**. Se retiraron del barrido las cinco rutas Housing antiguas de Customer API (`/hosting/*`), deprecadas después de centralizar el flujo en Provider API. La regresión autenticada adicional aprobó **15/15** lecturas de Customer y Provider —incluidas dos tarifas consolidadas— y el registro Provider nuevo aprobó **10/10**.
+La auditoría general repetida el 21 de octubre obtuvo **74/74 contratos activos respondiendo**. Se retiraron del barrido las cinco rutas Housing antiguas de Customer API (`/hosting/*`), deprecadas después de centralizar el flujo en Provider API. La regresión autenticada adicional aprobó **15/15** lecturas de Customer y Provider —incluidas dos tarifas consolidadas— y el registro Provider nuevo aprobó **10/10**. Los `401` del barrido readonly corresponden a recursos protegidos consultados sin JWT y confirman el control de acceso.
+
+La ejecución completa quedó registrada así: `npm run validate` **39/39**; `e2e-provider-registration.mjs` **10/10**; `e2e-two-customers.mjs` **38/38**; `e2e-authenticated.mjs` **15/15**; `audit-backend-contracts.mjs` **74/74**. No se ejecutaron `e2e-customer-community-hosting.mjs` ni `e2e-residential-dating.mjs` porque este checkout no tiene configurados sus secretos E2E específicos; sus recorridos equivalentes de Housing, comunidad, dating y chat sí están cubiertos por la prueba de dos clientes.
 
 El smoke Android instaló `NOD-1.0.30-android-v30.apk` en el AVD `NOD_Pixel`, confirmó `versionName 1.0.30`, `versionCode 30` y el arranque de `com.nod.mobile`. Este artefacto incluye la corrección del onboarding Provider. La revisión visual también aprobó `MainActivity`, onboarding, Login, selector de rol, formulario, teclado y botón Google. Al pulsar Google, la app informa correctamente que falta `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`; no es posible completar OAuth ni push hasta cargar Client IDs, proyecto EAS y archivos FCM/APNs.
 
