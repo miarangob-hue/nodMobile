@@ -1434,12 +1434,6 @@ function CreateBookingView({
       if (!bookingLocation) { Alert.alert("Ubicación requerida", "No pudimos ubicar esa dirección. Selecciona una sugerencia o presiona Ubicar esta dirección."); return; }
     }
 
-    const providerZones = provider.zones ?? [];
-    if (bookingComuna && providerZones.length > 0 && !providerZones.some((zone) => normalizeText(zone) === normalizeText(bookingComuna))) {
-      Alert.alert("Fuera de cobertura", `${provider.full_name ?? "Este paseador"} no tiene ${bookingComuna} entre sus zonas configuradas.`);
-      return;
-    }
-
     setIsSaving(true);
 
     try {

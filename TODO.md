@@ -10,6 +10,9 @@
 - [x] Validar cobertura geográfica al crear una reserva; Antártica contra Providencia responde `422 out_of_coverage`.
 - [x] Persistir dirección, comuna, ciudad, latitud y longitud en creación y listados; Mobile envía `commune` y normaliza el objeto `location`.
 - [ ] Sustituir las claves y credenciales de desarrollo antes de publicar en tiendas.
+- [x] Configurar el Web Client ID de Google en el entorno local y verificar su inclusión en APK/AAB `1.0.32`.
+- [x] Corregir falso rechazo de cobertura en Mobile: la reserva normal ya no compara `provider.zones` mal formado localmente y delega la decisión a Provider API.
+- [x] Probar en Android el flujo Customer de Providencia hasta checkout Mercado Pago sandbox; reserva QA quedó `pending/unpaid` sin cobro real.
 
 ## Calidad y pruebas
 
@@ -58,7 +61,7 @@
 ## Publicación
 
 - [x] Configurar upload key Android de producción y generar el AAB firmado `1.0.30 (30)`; falta cargarlo y habilitar Play App Signing en Play Console.
-- [x] Generar y verificar el APK y AAB `1.0.31 (31)` con el ajuste final de `pet_ids`; falta subir el AAB a la pista correspondiente de Google Play.
+- [x] Generar y verificar nuevamente el APK y AAB `1.0.32 (32)` después de corregir cobertura, con R8, `mapping.txt`, Web Client ID y el ajuste final de `pet_ids`; falta subir el AAB a la pista correspondiente de Google Play.
 - [ ] Configurar certificados y perfiles de distribución iOS.
 - [ ] Preparar íconos, capturas, ficha de tienda y política de privacidad.
 - [ ] Completar la lista consolidada de [`docs/PENDIENTES.md`](docs/PENDIENTES.md).

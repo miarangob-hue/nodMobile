@@ -8,17 +8,17 @@ Aplicación móvil de NOD para clientes y proveedores de servicios de mascotas. 
 
 | Plataforma | Versión | Build | Identificador | Estado |
 |---|---:|---:|---|---|
-| Android | `1.0.31` | `versionCode 31` | `com.nod.mobile` | APK y AAB release de producción generados y firmados |
-| iOS | `1.0.31` | `buildNumber 1` | `com.nod.mobile` | Configurado en Expo; IPA y distribución pendientes |
+| Android | `1.0.32` | `versionCode 32` | `com.nod.mobile` | APK y AAB release generados; R8 y Google Web Client ID verificados |
+| iOS | `1.0.32` | `buildNumber 1` | `com.nod.mobile` | Configurado en Expo; IPA y distribución pendientes |
 
-Android y iOS comparten el código funcional y la versión pública `1.0.31`. La compilación Android fue validada localmente; la versión iOS todavía debe compilarse y probarse en Xcode/EAS con certificados, provisioning profile, APNs y credenciales OAuth de iOS.
+Android y iOS comparten el código funcional y la versión pública `1.0.32`. La compilación Android fue validada localmente con R8, `mapping.txt` y `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`; la versión iOS todavía debe compilarse y probarse en Xcode/EAS con certificados, provisioning profile, APNs y credenciales OAuth de iOS.
 
 ## Estado funcional
 
 ### Implementado y verificado
 
 - Registro e inicio de sesión para clientes y proveedores.
-- Inicio de sesión nativo con Google para ambos roles, sujeto a la configuración OAuth del entorno.
+- Inicio de sesión nativo con Google para ambos roles; el Web Client ID Android ya está configurado en el entorno local y embebido en los builds release.
 - Validación de RUT chileno y onboarding por rol.
 - Gestión de mascotas, ficha médica y perfiles sociales.
 - Descubrimiento, likes, match mutuo y chat entre mascotas.
@@ -48,6 +48,8 @@ La validación local actual ejecuta **39 pruebas** y TypeScript sin errores. La 
 | Chat de reserva de servicio | Aprobado tras corrección P0 | Customer crea/abre chat, envía con `body`, lista y marca lectura con `200/201` |
 | Housing: búsqueda y ficha | Aprobado | `/search-hosting` y `/get-hosting-host` responden `200` con disponibilidad |
 | Housing: reserva | Aprobado | Creación `201`, listado/detalle `200`, metadata residencial, chat y cancelación `200/201` usando `hosting_profile_id` y `pet_ids` |
+| Reserva normal desde la app | Aprobado | Providencia: búsqueda, detalle, creación QA, listado y apertura del checkout Mercado Pago sandbox |
+| Cobertura en reserva normal | Corregido | La app dejó de rechazar localmente zonas por un campo `zones` mal formado; la API queda como fuente única de cobertura |
 | Tarifas Provider unificadas | Backend aprobado | Pablo devuelve Paseador `$15.000` desde `provider_catalog_prices` y Housing `$25.000` desde `hosting_profiles` tanto en `/update-provider-pricing` como en `/get-provider-pricing` |
 | Wallet, compras y notificaciones Customer | Aprobado | Consultas autenticadas `200` |
 | Pagos Provider + Mercado Pago | Aprobado hasta checkout | Reserva Provider reconocida; estado `unpaid` → checkout `201` → `pending`; falta completar una tarjeta sandbox y validar webhook `paid` |
@@ -63,13 +65,13 @@ La auditoría general repetida el 21 de octubre obtuvo **74/74 contratos activos
 
 La ejecución completa quedó registrada así: `npm run validate` **39/39**; `e2e-provider-registration.mjs` **10/10**; `e2e-two-customers.mjs` **38/38**; `e2e-authenticated.mjs` **15/15**; `audit-backend-contracts.mjs` **74/74**. No se ejecutaron `e2e-customer-community-hosting.mjs` ni `e2e-residential-dating.mjs` porque este checkout no tiene configurados sus secretos E2E específicos; sus recorridos equivalentes de Housing, comunidad, dating y chat sí están cubiertos por la prueba de dos clientes.
 
-El smoke Android instaló `NOD-1.0.30-android-v30.apk` en el AVD `NOD_Pixel`, confirmó `versionName 1.0.30`, `versionCode 30` y el arranque de `com.nod.mobile`. Este artefacto incluye la corrección del onboarding Provider. La revisión visual también aprobó `MainActivity`, onboarding, Login, selector de rol, formulario, teclado y botón Google. Al pulsar Google, la app informa correctamente que falta `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`; no es posible completar OAuth ni push hasta cargar Client IDs, proyecto EAS y archivos FCM/APNs.
+El smoke Android instaló `NOD-1.0.32-android-v32.apk` en el AVD `NOD_Pixel`, confirmó `versionName 1.0.32`, `versionCode 32` y el arranque de `com.nod.mobile`. La revisión visual completó login Customer, búsqueda en Providencia, reserva, detalle y apertura del checkout Mercado Pago sandbox con el concepto `Casa NOD con patio en Providencia` por `$10.000`; el formulario de tarjeta cargó sin confirmar el pago. El Web Client ID está incluido; aún falta certificar OAuth con el cliente Android de producción y un dispositivo físico.
 
 Los exports JavaScript Android e iOS terminaron correctamente. Esto valida el bundle compartido, pero no sustituye un IPA firmado ni pruebas iOS en simulador/dispositivo. Moderación rechazó correctamente al usuario Customer con `403`; falta una sesión que tenga `admin:moderation` para certificar las acciones administrativas.
 
 La regresión autenticada Customer → Provider también confirmó creación, visibilidad inmediata, aceptación, inicio, tracking, pausa, reanudación, finalización y consulta posterior sobre el mismo `booking_id`. El export Android de producción local terminó correctamente. La ruta documentada `/pets/:id/social-discovery` no está publicada; Mobile usa el contrato real `GET /discovery/candidates`.
 
-La certificación de pagos confirmó que `nod-api` reconoce las reservas de Provider. `GET /payments/bookings/:id` devolvió `unpaid`, `POST /payments/checkout` creó una preferencia sandbox con `init_point` y `sandbox_init_point`, y la consulta posterior devolvió `pending`. `POST /wallet/topups` también creó una preferencia sandbox `201`. Mobile normaliza estos contratos y envía `idempotency_key` al pagar con créditos. No se realizó ningún cargo real; queda pendiente completar una tarjeta sandbox para verificar webhook, transición a `paid`, acreditación de créditos y reembolsos.
+La certificación de pagos confirmó que `nod-api` reconoce las reservas de Provider. `GET /payments/bookings/:id` devolvió `unpaid`, `POST /payments/checkout` creó una preferencia sandbox con `init_point` y `sandbox_init_point`, y la consulta posterior devolvió `pending`. La prueba visual en Android abrió el checkout `x.mercadopago.cl` en sandbox y el formulario de tarjeta. `POST /wallet/topups` también creó una preferencia sandbox `201`. Mobile normaliza estos contratos y envía `idempotency_key` al pagar con créditos. No se realizó ningún cargo real; queda pendiente completar una tarjeta sandbox para verificar webhook, transición a `paid`, acreditación de créditos y reembolsos.
 
 La gamificación persistente también quedó recertificada: después de publicar, reaccionar y comentar, la cuenta E2E reportó 13 puntos, nivel Cachorro, una medalla y posición 2; el catálogo devolvió 10 medallas y los rankings global, mensual, semanal y por comuna respondieron `200`.
 
@@ -103,7 +105,8 @@ La gamificación persistente también quedó recertificada: después de publicar
 
 ### P1 — Integraciones y pruebas
 
-- [ ] Configurar los Client IDs OAuth definitivos y probar Google Login en dispositivos Android/iOS reales.
+- [x] Configurar `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` y verificarlo dentro del APK/AAB `1.0.32`.
+- [ ] Configurar los clientes OAuth Android/iOS definitivos, registrar la SHA de producción y probar Google Login en dispositivos reales.
 - [ ] Vincular el proyecto EAS definitivo y configurar FCM para Android y APNs para iOS.
 - [ ] Probar notificaciones push externas en teléfonos físicos.
 - [ ] Completar Mercado Pago sandbox con tarjeta de prueba hasta webhook `paid`, acreditar Créditos NOD, comprobar débito idempotente con saldo, reembolsos y payouts.
@@ -123,6 +126,7 @@ La gamificación persistente también quedó recertificada: después de publicar
 - [ ] Incorporar disponibilidad horaria avanzada al filtro de proveedores.
 - [ ] Completar accesibilidad y pruebas con lector de pantalla y texto ampliado.
 - [x] Configurar upload key Android de producción y generar el AAB `1.0.30 (30)` para Google Play.
+- [x] Generar APK/AAB `1.0.32 (32)` con R8, `mapping.txt` y Web Client ID; falta cargar el AAB en la pista interna de Google Play.
 - [ ] Configurar certificados y perfiles de distribución iOS.
 - [ ] Completar revisión jurídica e identidad legal de privacidad, términos y eliminación; las páginas públicas ya responden `200`.
 - [ ] Preparar capturas, fichas de tienda, Data Safety y Privacy Nutrition Labels.
@@ -192,9 +196,9 @@ JAVA_HOME=/ruta/al/jdk-17 \
 ./gradlew bundleRelease
 ```
 
-El `.aab` queda en `android/app/build/outputs/bundle/release/app-release.aab`. La upload key y sus contraseñas deben mantenerse fuera de Git, respaldarse en un gestor seguro y reutilizarse para las próximas versiones.
+El `.aab` queda en `android/app/build/outputs/bundle/release/app-release.aab`. Con R8 activado, `mapping.txt` queda en `android/app/build/outputs/mapping/release/mapping.txt` y también se incluye en los metadatos del AAB. La upload key y sus contraseñas deben mantenerse fuera de Git, respaldarse en un gestor seguro y reutilizarse para las próximas versiones.
 
-Los artefactos actuales son `dist/NOD-1.0.31-android-v31.apk` y `dist/NOD-1.0.31-android-v31-play.aab`. Ambos están firmados con el certificado de upload `nod-upload`; el APK declara `versionName 1.0.31`, `versionCode 31`, `minSdk 24` y `targetSdk 36`. Google Play App Signing debe estar habilitado para la publicación.
+Los artefactos locales recién generados también están copiados en `dist/NOD-1.0.32-android-v32.apk`, `dist/NOD-1.0.32-android-v32-play.aab` y `dist/NOD-1.0.32-android-v32-mapping.txt`; esta verificación local usa la clave debug. Para publicar, se debe regenerar con la upload key `nod-upload`; el APK declara `versionName 1.0.32`, `versionCode 32`, `minSdk 24` y `targetSdk 36`. Google Play App Signing debe estar habilitado para la publicación.
 
 Build remoto con EAS:
 
@@ -209,7 +213,7 @@ Para publicación se deben configurar `EAS_PROJECT_ID`, Firebase/Google Services
 La configuración iOS actual usa:
 
 - Bundle identifier: `com.nod.mobile`.
-- Versión: `1.0.31`.
+- Versión: `1.0.32`.
 - Build number: `1`.
 - Compatibilidad con iPhone y iPad.
 - Permisos declarados para cámara y ubicación.

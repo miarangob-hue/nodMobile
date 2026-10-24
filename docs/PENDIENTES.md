@@ -1,14 +1,14 @@
 # Pendientes de NOD Mobile
 
-Última actualización: 21 de octubre de 2026. Código actual: `1.0.31` (`versionCode 31`).
+Última actualización: 23 de octubre de 2026. Código actual: `1.0.32` (`versionCode 32`).
 
 ## Resumen ejecutivo
 
-La funcionalidad principal está operativa: registro y login, mascotas, comunidad, match y chat, reservas normales, Housing y chat de reservas aprobaron las pruebas automatizadas y E2E. La ejecución del 21 de octubre pasó validación local **39/39**, registro Provider **10/10**, E2E de dos clientes **38/38**, regresión autenticada **15/15** y contratos **74/74**. El trabajo pendiente se concentra en preparar una compilación publicable, configurar integraciones externas y validar en dispositivos reales.
+La funcionalidad principal está operativa: registro y login, mascotas, comunidad, match y chat, reservas normales, Housing y chat de reservas aprobaron las pruebas automatizadas y E2E. La ejecución del 21 de octubre pasó validación local **39/39**, registro Provider **10/10**, E2E de dos clientes **38/38**, regresión autenticada **15/15** y contratos **74/74**. Android `1.0.32` fue recompilado el 23 de octubre después de corregir el falso rechazo de cobertura, con R8, `mapping.txt` y el Web Client ID de Google embebido en APK/AAB. El flujo visual Customer llegó al checkout Mercado Pago sandbox sin confirmar pago. El trabajo pendiente se concentra en publicación, integraciones externas y validación en dispositivos reales.
 
 Orden recomendado:
 
-1. **P0 — Antes de entregar una nueva versión:** proteger credenciales, generar Android `1.0.31 (31)` y completar la configuración mínima de Google Play.
+1. **P0 — Antes de entregar una nueva versión:** proteger credenciales, generar Android `1.0.32 (32)` y completar la configuración mínima de Google Play.
 2. **P1 — Antes de abrir la app al público:** terminar pagos, Google OAuth, push, documentos legales y pruebas físicas Android.
 3. **P1 iOS — Antes de publicar en App Store:** certificados, IPA, OAuth/APNs y pruebas físicas iPhone.
 4. **P2 — Después de estabilizar el lanzamiento:** accesibilidad avanzada, moderación, disponibilidad horaria y pruebas destructivas controladas.
@@ -23,13 +23,13 @@ Orden recomendado:
 
 **Terminado cuando:** las claves productivas se carguen desde el mecanismo seguro del build, las anteriores estén revocadas y ningún secreto aparezca en Git o documentación pública.
 
-### 2. Subir y probar Android `1.0.31 (31)`
+### 2. Subir y probar Android `1.0.32 (32)`
 
-**Estado actual:** el APK y AAB `1.0.31 (31)` ya fueron generados y verificados con la upload key. El APK declara `minSdk 24` y `targetSdk 36`.
+**Estado actual:** el APK y AAB `1.0.32 (32)` fueron recompilados después de la corrección de cobertura y verificados con R8; `mapping.txt` coincide con el mapa incluido en el AAB. Los artefactos están en `dist/`. El APK declara `minSdk 24` y `targetSdk 36`. Esta verificación local usa la clave debug; el build publicable debe regenerarse con la upload key de producción.
 
-**Qué falta:** instalar el APK v31 en emulador/dispositivo para el smoke final y cargar el AAB v31 en la pista interna de Google Play.
+**Qué falta:** cargar el AAB v32 en la pista interna de Google Play y repetir la certificación en un dispositivo físico.
 
-**Terminado cuando:** el APK v31 se instale y abra correctamente y el AAB v31 quede aceptado en una pista interna de Google Play.
+**Terminado cuando:** el APK v32 se instale y abra correctamente y el AAB v32 quede aceptado en una pista interna de Google Play.
 
 ### 3. Completar la ficha técnica mínima de Google Play
 
@@ -41,7 +41,7 @@ Orden recomendado:
 
 ### 4. Certificar pagos de extremo a extremo
 
-**Estado actual:** la consulta devuelve `unpaid`, Checkout Pro crea la preferencia con `201` y luego queda `pending`. La recarga de Créditos NOD también crea una preferencia.
+**Estado actual:** la consulta devuelve `unpaid`, Checkout Pro crea la preferencia con `201` y luego queda `pending`; Android abrió el checkout sandbox y el formulario de tarjeta por el flujo real de la app. La recarga de Créditos NOD también crea una preferencia.
 
 **Qué falta:** completar un pago con tarjeta sandbox, recibir el webhook válido, comprobar la transición a `paid` y verificar que no se duplique el cobro. Para Créditos NOD falta acreditar saldo de prueba y validar débito, idempotencia, reembolso y payout.
 
@@ -51,9 +51,9 @@ Orden recomendado:
 
 ### 5. Configurar Google Login real
 
-**Estado actual:** el botón y el flujo móvil existen, pero no se puede completar OAuth sin los Client IDs.
+**Estado actual:** el botón y el flujo móvil existen. `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` ya está configurado localmente y verificado dentro del APK/AAB `1.0.32`.
 
-**Qué falta:** configurar los clientes Web, Android e iOS, registrar SHA-1/SHA-256 de la firma Android y validar login y registro en builds firmados.
+**Qué falta:** configurar los clientes Android e iOS definitivos, registrar SHA-1/SHA-256 de la firma de producción y validar login y registro en builds firmados; el backend debe aceptar el mismo Client ID como audiencia (`aud`).
 
 **Terminado cuando:** un usuario nuevo y uno existente puedan autenticarse con Google desde Android; para cerrar iOS también debe aprobar en iPhone.
 
@@ -130,13 +130,14 @@ No debe confundirse esta sección con trabajo pendiente:
 - **Ciclo Provider:** aceptar, iniciar, registrar GPS, pausar, reanudar, completar y consultar detalle, timeline, ETA, ruta y fotos.
 - **Comunidad:** publicaciones, likes, comentarios, estadísticas, diez medallas y rankings global, mensual, semanal y por comuna.
 - **Seguridad funcional:** servicio inexistente `404`, fuera de cobertura `422`, fecha pasada `400`, conflicto horario `409` y cancelación ajena `403`.
-- **Android v30:** APK instalado y ejecutado en el emulador `NOD_Pixel`. Esta prueba no reemplaza el nuevo build v31 ni las pruebas en dispositivo físico.
+- **Android v32:** APK recompilado, instalado y ejecutado en el emulador `NOD_Pixel`; el flujo Customer llegó al checkout Mercado Pago sandbox. Esta prueba no reemplaza las pruebas en dispositivo físico.
+- **Cobertura normal:** se corrigió el falso rechazo local causado por `provider.zones` conteniendo una dirección en lugar de una comuna; Mobile delega ahora la validación al endpoint de creación.
 
 ## Próxima secuencia de trabajo recomendada
 
 1. Rotar/configurar secretos productivos.
-2. Instalar y ejecutar el smoke de `1.0.31 (31)`.
-3. Subir el AAB v31 a prueba interna de Google Play.
+2. Instalar y ejecutar el smoke de `1.0.32 (32)`.
+3. Subir el AAB v32 a prueba interna de Google Play.
 4. Completar Google OAuth y FCM en Android.
 5. Ejecutar la matriz física Android.
 6. Completar pago sandbox y webhook.
