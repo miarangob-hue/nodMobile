@@ -57,6 +57,8 @@ La auditoría adicional también detectó un `400 database_error` en actualizaci
 
 **Qué falta:** configurar los clientes Android e iOS definitivos, registrar SHA-1/SHA-256 de la firma de producción y validar login y registro en builds firmados; el backend debe aceptar el mismo Client ID como audiencia (`aud`).
 
+**Prueba realizada el 23-10:** el APK v32 configuró el Web Client ID y abrió Google Play Services hasta la pantalla nativa `Sign in`. No se completó el registro porque el emulador no tiene una cuenta Google. La huella observada pertenece al certificado debug local: SHA-1 `5e8f16062ea3cd2c4a0d547876baa6f38cabf625`, SHA-256 `fac61745dc0903786fb9ede62a962b399f7348f0bb6f899b8332667591033b9c`; aún no se verificó la huella de producción ni el cliente OAuth Android en Google Cloud/Firebase.
+
 **Terminado cuando:** un usuario nuevo y uno existente puedan autenticarse con Google desde Android; para cerrar iOS también debe aprobar en iPhone.
 
 ### 6. Completar notificaciones push
@@ -76,6 +78,8 @@ La auditoría adicional también detectó un `400 database_error` en actualizaci
 ### 8. Probar Android en dispositivos físicos
 
 **Qué falta:** registro Customer/Provider, teclado, cámara, GPS, mapa, permisos aceptados/denegados, red intermitente, reserva normal, Housing, ambos chats, pago y push.
+
+**Prueba realizada:** el APK v32 se instaló y abrió en `NOD_Pixel`; se verificó onboarding, login Customer QA y dashboard. No se considera prueba física ni certifica cámara, GPS, push, pago completo o red intermitente.
 
 **Terminado cuando:** la matriz pase en al menos un Android soportado y las fallas recuperables muestren mensajes claros sin cerrar la app.
 
@@ -133,17 +137,22 @@ No debe confundirse esta sección con trabajo pendiente:
 - **Ciclo Provider:** aceptar, iniciar, registrar GPS, pausar, reanudar, completar y consultar detalle, timeline, ETA, ruta y fotos.
 - **Comunidad:** publicaciones, likes, comentarios, estadísticas, diez medallas y rankings global, mensual, semanal y por comuna.
 - **Seguridad funcional:** servicio inexistente `404`, fuera de cobertura `422`, fecha pasada `400`, conflicto horario `409` y cancelación ajena `403`.
-- **Android v32:** APK recompilado, instalado y ejecutado en el emulador `NOD_Pixel`; el flujo Customer llegó al checkout Mercado Pago sandbox. Esta prueba no reemplaza las pruebas en dispositivo físico.
+- **Android v32:** APK recompilado, instalado y ejecutado en el emulador `NOD_Pixel`; se verificaron onboarding, login Customer QA y dashboard. El checkout Mercado Pago se había alcanzado en un recorrido manual anterior, pero no se repitió completo con este APK v32 y no reemplaza las pruebas en dispositivo físico.
 - **Cobertura normal:** se corrigió el falso rechazo local causado por `provider.zones` conteniendo una dirección en lugar de una comuna; Mobile delega ahora la validación al endpoint de creación.
 - **Pendiente técnico:** `audit-backend-extra.mjs` devolvió `400 database_error` al actualizar un perfil Provider; el resto de respuestas negativas del barrido correspondió a falta de JWT o IDs de prueba inválidos.
+- **Pendientes no ejecutados:** `e2e-authenticated.mjs` requiere `NOD_E2E_CUSTOMER_EMAIL`, `NOD_E2E_PROVIDER_EMAIL` y `NOD_E2E_PASSWORD`; `e2e-customer-community-hosting.mjs` requiere cuentas y `NOD_E2E_HOSTING_PROFILE_ID`; `e2e-residential-dating.mjs` requiere `NOD_E2E_PROVIDER_PROJECT_URL`, `NOD_E2E_PROVIDER_ANON_KEY` y `NOD_E2E_TEST_EMAIL_BASE`.
+- **Google Android:** prueba parcial; falta una cuenta Google QA en el emulador y la configuración/verificación de la huella de producción.
+- **Google iOS:** no probado; falta `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`, certificados, provisioning profile y dispositivo.
+- **Push externo:** no probado; faltan proyecto EAS, FCM, APNs, worker y tokens reales.
 
 ## Próxima secuencia de trabajo recomendada
 
 1. Rotar/configurar secretos productivos.
-2. Instalar y ejecutar el smoke de `1.0.32 (32)`.
+2. Configurar las cuentas/IDs E2E faltantes y repetir las tres suites bloqueadas.
 3. Subir el AAB v32 a prueba interna de Google Play.
-4. Completar Google OAuth y FCM en Android.
+4. Completar Google OAuth Android con cuenta QA, SHA de producción y cliente OAuth Android.
 5. Ejecutar la matriz física Android.
-6. Completar pago sandbox y webhook.
-7. Cerrar ficha, Data Safety y documentos legales.
-8. Preparar certificados, APNs, IPA y TestFlight para iOS.
+6. Completar pago sandbox, webhook y Créditos NOD.
+7. Corregir `database_error` de perfil Provider y repetir auditoría.
+8. Cerrar ficha, Data Safety y documentos legales.
+9. Preparar certificados, APNs, IPA y TestFlight para iOS.

@@ -28,6 +28,9 @@
 - [ ] Completar pruebas E2E Android/iOS para ubicación, mapa, permisos y formularios; Android ya aprobó instalación, arranque, render de Login y entrada con teclado en emulador.
 - [ ] Repetir `e2e-authenticated.mjs`, `e2e-customer-community-hosting.mjs` y `e2e-residential-dating.mjs` después de configurar todas sus credenciales/IDs E2E.
 - [ ] Corregir el `400 database_error` de actualización de perfil Provider y repetir `audit-backend-extra.mjs`.
+- [ ] Completar Google Android: agregar una cuenta Google QA al emulador/dispositivo, registrar SHA de producción en Google Cloud/Firebase y validar registro/login; la prueba actual solo llegó a la pantalla nativa de Google.
+- [ ] Configurar y probar Google iOS: falta `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`, cliente OAuth iOS, firma y dispositivo.
+- [ ] Completar pruebas físicas Android/iOS de cámara, GPS, permisos aceptados/denegados, red intermitente, reserva, pago y push.
 - [x] Agregar CI para ejecutar TypeScript, pruebas y export Android de validación en cada pull request.
 - [ ] Probar permisos denegados y conectividad intermitente en dispositivos reales.
 - [x] Reparar el perfil social histórico asociado al cliente QA: perfil y foto principal publicados; `/discovery/candidates` volvió a responder `200`.
