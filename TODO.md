@@ -18,6 +18,8 @@
 
 Última ejecución verificable: **23 de octubre de 2026**. `npm run validate` pasó **39/39**; registro Provider **10/10**; E2E de dos Customer **38/38**; auditoría de contratos **74/74**; `npm run test:api` respondió al ejecutarse con red autorizada. La regresión autenticada histórica **15/15** no se pudo repetir porque faltan sus credenciales; tampoco arrancaron los E2E que requieren `NOD_E2E_HOSTING_PROFILE_ID`, proyecto/anon key y cuentas separadas. La auditoría adicional detectó un `400 database_error` en actualización de perfil Provider.
 
+Evidencia detallada, comandos, IDs QA, artefactos Android y huellas del APK: [`docs/PENDIENTES.md#evidencia-reproducible`](docs/PENDIENTES.md#evidencia-reproducible).
+
 - [x] Recertificar registro Provider desde cero: cuenta nueva, login, 13 pasos, progreso/rechazos, guardado de categoría/paseador y persistencia (10/10).
 - [x] Corregir el contrato de onboarding Provider para enviar `provider_id` en lectura, rechazos y escritura; agregar regresión automatizada.
 - [x] Corregir campos de contraseña visibles en Android para los registros Customer y Provider.

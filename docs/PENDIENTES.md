@@ -124,6 +124,24 @@ Falta probar lector de pantalla, tamaños de texto grandes, contraste, navegaci�
 
 No debe confundirse esta sección con trabajo pendiente:
 
+## Evidencia reproducible
+
+| Área | Evidencia concreta | Resultado |
+|---|---|---|
+| Validación local | `npm run validate` ejecutado el 23-10 | TypeScript correcto; Vitest **39/39** |
+| Registro Provider | `node --env-file=.env scripts/e2e-provider-registration.mjs` | **10/10**; cuenta QA creada y onboarding persistido |
+| E2E dos clientes | `node --env-file=.env scripts/e2e-two-customers.mjs` | **38/38**; match `204ab2c8-399e-4339-9456-b6bb4f1d14de`, Housing `4fc53b18-6a14-4cdd-aa4f-931d2994f019`, servicio `e96fba32-d83a-4f7e-970c-93296dc120b9` |
+| Contratos | `node --env-file=.env scripts/audit-backend-contracts.mjs` | **74/74** endpoints respondiendo |
+| Smoke API | `npm run test:api` con red autorizada | Endpoints válidos respondieron; respuestas `401/403/404` corresponden a sesiones o IDs inválidos de prueba |
+| APK Android | `dist/NOD-1.0.32-android-v32.apk`, `aapt dump badging` | `com.nod.mobile`, `versionCode 32`, `versionName 1.0.32`, `minSdk 24`, `targetSdk 36` |
+| AAB y mapping | `dist/NOD-1.0.32-android-v32-play.aab` y `dist/NOD-1.0.32-android-v32-mapping.txt` | Build R8 generado; mapping versionado en `dist/` |
+| Android smoke | Instalación con `adb install -r`, apertura de `MainActivity` en `NOD_Pixel` | APK instalado; onboarding, login Customer QA y dashboard visibles |
+| Google Android | Botón Google del APK v32 | Google Play Services abrió `Sign in`; no se completó porque el emulador no tenía cuenta Google |
+| SHA del APK local | `apksigner verify --print-certs dist/NOD-1.0.32-android-v32.apk` | SHA-1 `5e8f16062ea3cd2c4a0d547876baa6f38cabf625`; SHA-256 `fac61745dc0903786fb9ede62a962b399f7348f0bb6f899b8332667591033b9c` |
+| Mercado Pago | Reserva QA `1bb95a03-c828-4de8-830d-d0341bea14c0`; checkout sandbox `x.mercadopago.cl` | `unpaid`/`pending`; formulario de tarjeta visible; sin cobro ni webhook `paid` |
+
+La evidencia de build y mapping queda en `dist/` local; el APK/AAB están ignorados por Git y el mapping está permitido/versionado. La evidencia de ejecución E2E queda además resumida en los JSON de salida de cada script durante la ejecución; las cuentas y tokens QA no se documentan para no exponer credenciales.
+
 - **Customer E2E del 23-10: 38/38.** Dos cuentas nuevas completaron registro, login, mascotas, perfiles sociales, Discovery, match/chat, comunidad, Housing/chat y reserva normal/chat. Las reservas de prueba fueron canceladas.
 - **Provider nuevo del 23-10: 10/10.** Registro, login, 13 pasos activos, progreso, rechazos, guardado de categoría/paseador y persistencia.
 - **Lecturas autenticadas del 21-10: 15/15.** Las cuentas QA Customer y Provider accedieron correctamente a sus recursos; Pablo devolvió dos tarifas consolidadas.
