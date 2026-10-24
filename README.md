@@ -50,6 +50,7 @@ La validación local actual ejecuta **39 pruebas** y TypeScript sin errores. La 
 | Housing: reserva | Aprobado | Creación `201`, listado/detalle `200`, metadata residencial, chat y cancelación `200/201` usando `hosting_profile_id` y `pet_ids` |
 | Reserva normal desde la app | Aprobado | Providencia: búsqueda, detalle, creación QA, listado y apertura del checkout Mercado Pago sandbox |
 | Cobertura en reserva normal | Corregido | La app dejó de rechazar localmente zonas por un campo `zones` mal formado; la API queda como fuente única de cobertura |
+| Suites E2E adicionales | Pendiente de ejecución | `e2e-authenticated.mjs`, `e2e-customer-community-hosting.mjs` y `e2e-residential-dating.mjs` requieren credenciales/IDs E2E ausentes en este checkout |
 | Tarifas Provider unificadas | Backend aprobado | Pablo devuelve Paseador `$15.000` desde `provider_catalog_prices` y Housing `$25.000` desde `hosting_profiles` tanto en `/update-provider-pricing` como en `/get-provider-pricing` |
 | Wallet, compras y notificaciones Customer | Aprobado | Consultas autenticadas `200` |
 | Pagos Provider + Mercado Pago | Aprobado hasta checkout | Reserva Provider reconocida; estado `unpaid` → checkout `201` → `pending`; falta completar una tarjeta sandbox y validar webhook `paid` |
@@ -61,9 +62,9 @@ La validación local actual ejecuta **39 pruebas** y TypeScript sin errores. La 
 
 La regresión Customer repetida el 21 de octubre obtuvo **38/38** con dos cuentas nuevas: registro, login, mascotas, perfiles sociales, Discovery, match/chat, comunidad, Housing con chat y reserva normal con chat aprobaron. Las reservas Housing y normal fueron canceladas al finalizar. La app envía ahora `pet_ids` formalmente en ambos flujos, además de `pet_id` por compatibilidad en reservas normales.
 
-La auditoría general repetida el 21 de octubre obtuvo **74/74 contratos activos respondiendo**. Se retiraron del barrido las cinco rutas Housing antiguas de Customer API (`/hosting/*`), deprecadas después de centralizar el flujo en Provider API. La regresión autenticada adicional aprobó **15/15** lecturas de Customer y Provider —incluidas dos tarifas consolidadas— y el registro Provider nuevo aprobó **10/10**. Los `401` del barrido readonly corresponden a recursos protegidos consultados sin JWT y confirman el control de acceso.
+La auditoría general ejecutada el 23 de octubre obtuvo **74/74 contratos activos respondiendo**. Se retiraron del barrido las cinco rutas Housing antiguas de Customer API (`/hosting/*`), deprecadas después de centralizar el flujo en Provider API. La regresión autenticada histórica aprobó **15/15** lecturas de Customer y Provider; no se pudo repetir en esta ejecución porque faltan sus credenciales E2E. El registro Provider nuevo aprobó **10/10**. Los `401/403/404` del smoke con IDs inválidos o sin JWT son respuestas negativas esperadas y confirman control de acceso.
 
-La ejecución completa quedó registrada así: `npm run validate` **39/39**; `e2e-provider-registration.mjs` **10/10**; `e2e-two-customers.mjs` **38/38**; `e2e-authenticated.mjs` **15/15**; `audit-backend-contracts.mjs` **74/74**. No se ejecutaron `e2e-customer-community-hosting.mjs` ni `e2e-residential-dating.mjs` porque este checkout no tiene configurados sus secretos E2E específicos; sus recorridos equivalentes de Housing, comunidad, dating y chat sí están cubiertos por la prueba de dos clientes.
+La ejecución verificable de este checkout quedó así: `npm run validate` **39/39**; `e2e-provider-registration.mjs` **10/10**; `e2e-two-customers.mjs` **38/38**; `audit-backend-contracts.mjs` **74/74**; `npm run test:api` respondió correctamente al ejecutarse con red autorizada. `e2e-authenticated.mjs`, `e2e-customer-community-hosting.mjs` y `e2e-residential-dating.mjs` no arrancaron porque faltan sus credenciales/IDs E2E. La auditoría adicional detectó un `400 database_error` en actualización de perfil Provider, que queda pendiente de corregir.
 
 El smoke Android instaló `NOD-1.0.32-android-v32.apk` en el AVD `NOD_Pixel`, confirmó `versionName 1.0.32`, `versionCode 32` y el arranque de `com.nod.mobile`. La revisión visual completó login Customer, búsqueda en Providencia, reserva, detalle y apertura del checkout Mercado Pago sandbox con el concepto `Casa NOD con patio en Providencia` por `$10.000`; el formulario de tarjeta cargó sin confirmar el pago. El Web Client ID está incluido; aún falta certificar OAuth con el cliente Android de producción y un dispositivo físico.
 
@@ -110,6 +111,7 @@ La gamificación persistente también quedó recertificada: después de publicar
 - [ ] Vincular el proyecto EAS definitivo y configurar FCM para Android y APNs para iOS.
 - [ ] Probar notificaciones push externas en teléfonos físicos.
 - [ ] Completar Mercado Pago sandbox con tarjeta de prueba hasta webhook `paid`, acreditar Créditos NOD, comprobar débito idempotente con saldo, reembolsos y payouts.
+- [ ] Corregir y repetir la actualización de perfil Provider que respondió `400 database_error` (`Cannot coerce the result to a single JSON object`).
 - [ ] Ejecutar regresión E2E en dispositivos físicos: permisos, cámara, GPS, mapas, teclado y red intermitente.
 - [ ] Probar moderación comunitaria con un usuario que tenga `admin:moderation`.
 - [x] Reparar el perfil social histórico de QA y confirmar `/discovery/candidates` con respuesta `200`.

@@ -4,7 +4,7 @@
 
 ## Resumen ejecutivo
 
-La funcionalidad principal está operativa: registro y login, mascotas, comunidad, match y chat, reservas normales, Housing y chat de reservas aprobaron las pruebas automatizadas y E2E. La ejecución del 21 de octubre pasó validación local **39/39**, registro Provider **10/10**, E2E de dos clientes **38/38**, regresión autenticada **15/15** y contratos **74/74**. Android `1.0.32` fue recompilado el 23 de octubre después de corregir el falso rechazo de cobertura, con R8, `mapping.txt` y el Web Client ID de Google embebido en APK/AAB. El flujo visual Customer llegó al checkout Mercado Pago sandbox sin confirmar pago. El trabajo pendiente se concentra en publicación, integraciones externas y validación en dispositivos reales.
+La funcionalidad principal está operativa: registro y login, mascotas, comunidad, match y chat, reservas normales, Housing y chat de reservas aprobaron las pruebas automatizadas y E2E disponibles. El 23 de octubre pasaron validación local **39/39**, registro Provider **10/10**, E2E de dos clientes **38/38** y contratos **74/74**. La regresión autenticada histórica **15/15** no pudo repetirse porque faltan credenciales E2E; tampoco arrancaron los E2E residenciales/dating específicos por falta de configuración. Android `1.0.32` fue recompilado después de corregir el falso rechazo de cobertura, con R8, `mapping.txt` y el Web Client ID de Google embebido en APK/AAB. El flujo visual Customer llegó al checkout Mercado Pago sandbox sin confirmar pago. El trabajo pendiente se concentra en publicación, integraciones externas, un `400 database_error` de perfil Provider y validación en dispositivos reales.
 
 Orden recomendado:
 
@@ -46,6 +46,8 @@ Orden recomendado:
 **Qué falta:** completar un pago con tarjeta sandbox, recibir el webhook válido, comprobar la transición a `paid` y verificar que no se duplique el cobro. Para Créditos NOD falta acreditar saldo de prueba y validar débito, idempotencia, reembolso y payout.
 
 **Dependencia:** credenciales y usuarios sandbox de Mercado Pago, webhook accesible y saldo de prueba.
+
+La auditoría adicional también detectó un `400 database_error` en actualización de perfil Provider (`Cannot coerce the result to a single JSON object`); debe corregirse y repetirse antes de marcar ese flujo como aprobado.
 
 **Terminado cuando:** un pago completo cambie de `unpaid` a `pending` y finalmente a `paid`, y un reintento conserve un solo cobro.
 
@@ -118,11 +120,12 @@ Falta probar lector de pantalla, tamaños de texto grandes, contraste, navegaci�
 
 No debe confundirse esta sección con trabajo pendiente:
 
-- **Customer E2E del 21-10: 38/38.** Dos cuentas nuevas completaron registro, login, mascotas, perfiles sociales, Discovery, match/chat, comunidad, Housing/chat y reserva normal/chat. Las reservas de prueba fueron canceladas.
-- **Provider nuevo del 21-10: 10/10.** Registro, login, 13 pasos activos, progreso, rechazos, guardado de categoría/paseador y persistencia.
+- **Customer E2E del 23-10: 38/38.** Dos cuentas nuevas completaron registro, login, mascotas, perfiles sociales, Discovery, match/chat, comunidad, Housing/chat y reserva normal/chat. Las reservas de prueba fueron canceladas.
+- **Provider nuevo del 23-10: 10/10.** Registro, login, 13 pasos activos, progreso, rechazos, guardado de categoría/paseador y persistencia.
 - **Lecturas autenticadas del 21-10: 15/15.** Las cuentas QA Customer y Provider accedieron correctamente a sus recursos; Pablo devolvió dos tarifas consolidadas.
-- **Contratos activos del 21-10: 74/74.** Las cinco rutas `/hosting/*` antiguas de Customer API quedaron fuera porque están deprecadas; Mobile usa Provider API.
+- **Contratos activos del 23-10: 74/74.** Las cinco rutas `/hosting/*` antiguas de Customer API quedaron fuera porque están deprecadas; Mobile usa Provider API.
 - **Cobertura pendiente de configuración:** `e2e-customer-community-hosting.mjs` y `e2e-residential-dating.mjs` no corrieron porque faltan secretos E2E específicos en este checkout; no se consideran fallos del backend.
+- **Regresión autenticada pendiente de repetición:** `e2e-authenticated.mjs` tampoco arrancó porque faltan las credenciales E2E Customer/Provider; el resultado histórico 15/15 se conserva como referencia, no como ejecución actual.
 - **Tarifas unificadas:** los dos endpoints Provider devolvieron las mismas dos tarifas, con su fuente efectiva y el perfil Housing correspondiente.
 - **Validación local: 39/39.** TypeScript y pruebas automatizadas sin errores.
 - **Housing:** búsqueda, detalle, creación `201`, listado, metadata residencial, chat, lectura y cancelación aprobados. Mobile envía `hosting_profile_id` y `pet_ids`.
@@ -132,6 +135,7 @@ No debe confundirse esta sección con trabajo pendiente:
 - **Seguridad funcional:** servicio inexistente `404`, fuera de cobertura `422`, fecha pasada `400`, conflicto horario `409` y cancelación ajena `403`.
 - **Android v32:** APK recompilado, instalado y ejecutado en el emulador `NOD_Pixel`; el flujo Customer llegó al checkout Mercado Pago sandbox. Esta prueba no reemplaza las pruebas en dispositivo físico.
 - **Cobertura normal:** se corrigió el falso rechazo local causado por `provider.zones` conteniendo una dirección en lugar de una comuna; Mobile delega ahora la validación al endpoint de creación.
+- **Pendiente técnico:** `audit-backend-extra.mjs` devolvió `400 database_error` al actualizar un perfil Provider; el resto de respuestas negativas del barrido correspondió a falta de JWT o IDs de prueba inválidos.
 
 ## Próxima secuencia de trabajo recomendada
 

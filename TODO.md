@@ -16,7 +16,7 @@
 
 ## Calidad y pruebas
 
-Última ejecución completa: **21 de octubre de 2026**. `npm run validate` pasó **39/39**; registro Provider **10/10**; E2E de dos Customer **38/38**; regresión autenticada **15/15**; auditoría de contratos **74/74**. Los E2E que requieren `NOD_E2E_HOSTING_PROFILE_ID`, proyecto/anon key y cuentas separadas no se ejecutaron en este checkout por configuración ausente; sus flujos equivalentes están cubiertos por `e2e-two-customers.mjs`.
+Última ejecución verificable: **23 de octubre de 2026**. `npm run validate` pasó **39/39**; registro Provider **10/10**; E2E de dos Customer **38/38**; auditoría de contratos **74/74**; `npm run test:api` respondió al ejecutarse con red autorizada. La regresión autenticada histórica **15/15** no se pudo repetir porque faltan sus credenciales; tampoco arrancaron los E2E que requieren `NOD_E2E_HOSTING_PROFILE_ID`, proyecto/anon key y cuentas separadas. La auditoría adicional detectó un `400 database_error` en actualización de perfil Provider.
 
 - [x] Recertificar registro Provider desde cero: cuenta nueva, login, 13 pasos, progreso/rechazos, guardado de categoría/paseador y persistencia (10/10).
 - [x] Corregir el contrato de onboarding Provider para enviar `provider_id` en lectura, rechazos y escritura; agregar regresión automatizada.
@@ -26,6 +26,8 @@
 - [x] Certificar el ciclo interno Provider directo: crear, aceptar, iniciar, tracking, pausar, reanudar y completar.
 - [x] Unificar reservas normales en Provider API y certificar chat/cancelación sobre el mismo `booking_id`.
 - [ ] Completar pruebas E2E Android/iOS para ubicación, mapa, permisos y formularios; Android ya aprobó instalación, arranque, render de Login y entrada con teclado en emulador.
+- [ ] Repetir `e2e-authenticated.mjs`, `e2e-customer-community-hosting.mjs` y `e2e-residential-dating.mjs` después de configurar todas sus credenciales/IDs E2E.
+- [ ] Corregir el `400 database_error` de actualización de perfil Provider y repetir `audit-backend-extra.mjs`.
 - [x] Agregar CI para ejecutar TypeScript, pruebas y export Android de validación en cada pull request.
 - [ ] Probar permisos denegados y conectividad intermitente en dispositivos reales.
 - [x] Reparar el perfil social histórico asociado al cliente QA: perfil y foto principal publicados; `/discovery/candidates` volvió a responder `200`.
