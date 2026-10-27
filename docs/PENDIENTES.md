@@ -1,10 +1,10 @@
 # Pendientes de NOD Mobile
 
-Última actualización: 23 de octubre de 2026. Código actual: `1.0.32` (`versionCode 32`).
+Última actualización: 27 de octubre de 2026. Código actual: `1.0.32` (`versionCode 32`).
 
 ## Resumen ejecutivo
 
-La funcionalidad principal está operativa: registro y login, mascotas, comunidad, match y chat, reservas normales, Housing y chat de reservas aprobaron las pruebas automatizadas y E2E disponibles. El 23 de octubre pasaron validación local **39/39**, registro Provider **10/10**, E2E de dos clientes **38/38** y contratos **74/74**. La regresión autenticada histórica **15/15** no pudo repetirse porque faltan credenciales E2E; tampoco arrancaron los E2E residenciales/dating específicos por falta de configuración. Android `1.0.32` fue recompilado después de corregir el falso rechazo de cobertura, con R8, `mapping.txt` y el Web Client ID de Google embebido en APK/AAB. El flujo visual Customer llegó al checkout Mercado Pago sandbox sin confirmar pago. El trabajo pendiente se concentra en publicación, integraciones externas, un `400 database_error` de perfil Provider y validación en dispositivos reales.
+La funcionalidad principal está operativa: registro y login, mascotas, comunidad, match y chat, reservas normales, Housing y chat de reservas aprobaron las pruebas automatizadas y E2E disponibles. El 23 de octubre pasaron validación local **39/39**, registro Provider **10/10**, E2E de dos clientes **38/38** y contratos **74/74**. La regresión autenticada histórica **15/15** no pudo repetirse porque faltan credenciales E2E; tampoco arrancaron los E2E residenciales/dating específicos por falta de configuración. El 27 de octubre Android `1.0.32` se recompiló con la upload key correcta de producción, R8, `mapping.txt` y el Web Client ID de Google embebido en APK/AAB. El flujo visual Customer llegó al checkout Mercado Pago sandbox sin confirmar pago. El trabajo pendiente se concentra en publicación, integraciones externas, un `400 database_error` de perfil Provider y validación en dispositivos reales.
 
 Orden recomendado:
 
@@ -25,9 +25,9 @@ Orden recomendado:
 
 ### 2. Subir y probar Android `1.0.32 (32)`
 
-**Estado actual:** el APK y AAB `1.0.32 (32)` fueron recompilados después de la corrección de cobertura y verificados con R8; `mapping.txt` coincide con el mapa incluido en el AAB. Los artefactos están en `dist/`. El APK declara `minSdk 24` y `targetSdk 36`. Esta verificación local usa la clave debug; el build publicable debe regenerarse con la upload key de producción.
+**Estado actual:** el APK y AAB `1.0.32 (32)` fueron recompilados el 27-10 con la upload key `nod-upload` y verificados con R8. `mapping.txt` coincide con el mapa incluido en el AAB. Los artefactos firmados están en `dist/`: `NOD-1.0.32-android-v32-play-signed.aab`, `NOD-1.0.32-android-v32-signed.apk` y `NOD-1.0.32-android-v32-signed-mapping.txt`. El APK declara `minSdk 24` y `targetSdk 36`. SHA-1 verificada: `C9:37:44:C3:3C:D1:14:CD:A8:EF:B1:D2:8C:9A:7E:29:48:E1:74:38`; SHA-256: `AF:67:D9:4B:0E:29:62:9C:7A:D2:9C:C4:C5:0D:27:F2:AC:13:43:DF:AA:D6:CB:CB:CB:AE:8D:50:08:39:A8:B3`. El AAB contiene `BUNDLE-METADATA/com.android.tools.build.obfuscation/proguard.map`.
 
-**Qué falta:** cargar el AAB v32 en la pista interna de Google Play y repetir la certificación en un dispositivo físico.
+**Qué falta:** cargar `dist/NOD-1.0.32-android-v32-play-signed.aab` en la pista interna de Google Play y repetir la certificación en un dispositivo físico.
 
 **Terminado cuando:** el APK v32 se instale y abra correctamente y el AAB v32 quede aceptado en una pista interna de Google Play.
 
@@ -57,7 +57,7 @@ La auditoría adicional también detectó un `400 database_error` en actualizaci
 
 **Qué falta:** configurar los clientes Android e iOS definitivos, registrar SHA-1/SHA-256 de la firma de producción y validar login y registro en builds firmados; el backend debe aceptar el mismo Client ID como audiencia (`aud`).
 
-**Prueba realizada el 23-10:** el APK v32 configuró el Web Client ID y abrió Google Play Services hasta la pantalla nativa `Sign in`. No se completó el registro porque el emulador no tiene una cuenta Google. La huella observada pertenece al certificado debug local: SHA-1 `5e8f16062ea3cd2c4a0d547876baa6f38cabf625`, SHA-256 `fac61745dc0903786fb9ede62a962b399f7348f0bb6f899b8332667591033b9c`; aún no se verificó la huella de producción ni el cliente OAuth Android en Google Cloud/Firebase.
+**Prueba realizada el 23-10:** el APK v32 debug configuró el Web Client ID y abrió Google Play Services hasta la pantalla nativa `Sign in`; no se completó el registro porque el emulador no tenía una cuenta Google. **Verificación de build realizada el 27-10:** el APK/AAB firmado usa la SHA-1 de producción `C9:37:44:C3:3C:D1:14:CD:A8:EF:B1:D2:8C:9A:7E:29:48:E1:74:38` y SHA-256 `AF:67:D9:4B:0E:29:62:9C:7A:D2:9C:C4:C5:0D:27:F2:AC:13:43:DF:AA:D6:CB:CB:CB:AE:8D:50:08:39:A8:B3`. El login Google con una cuenta real y la configuración final del cliente OAuth Android en Google Cloud/Firebase todavía requieren ejecución en un dispositivo o emulador con cuenta Google.
 
 **Terminado cuando:** un usuario nuevo y uno existente puedan autenticarse con Google desde Android; para cerrar iOS también debe aprobar en iPhone.
 
@@ -133,11 +133,11 @@ No debe confundirse esta sección con trabajo pendiente:
 | E2E dos clientes | `node --env-file=.env scripts/e2e-two-customers.mjs` | **38/38**; match `204ab2c8-399e-4339-9456-b6bb4f1d14de`, Housing `4fc53b18-6a14-4cdd-aa4f-931d2994f019`, servicio `e96fba32-d83a-4f7e-970c-93296dc120b9` |
 | Contratos | `node --env-file=.env scripts/audit-backend-contracts.mjs` | **74/74** endpoints respondiendo |
 | Smoke API | `npm run test:api` con red autorizada | Endpoints válidos respondieron; respuestas `401/403/404` corresponden a sesiones o IDs inválidos de prueba |
-| APK Android | `dist/NOD-1.0.32-android-v32.apk`, `aapt dump badging` | `com.nod.mobile`, `versionCode 32`, `versionName 1.0.32`, `minSdk 24`, `targetSdk 36` |
-| AAB y mapping | `dist/NOD-1.0.32-android-v32-play.aab` y `dist/NOD-1.0.32-android-v32-mapping.txt` | Build R8 generado; mapping versionado en `dist/` |
+| APK Android firmado | `dist/NOD-1.0.32-android-v32-signed.apk`, `apksigner verify --print-certs` | `com.nod.mobile`, `versionCode 32`, `versionName 1.0.32`, `minSdk 24`, `targetSdk 36`; SHA-1 de producción verificada |
+| AAB firmado y mapping | `dist/NOD-1.0.32-android-v32-play-signed.aab` y `dist/NOD-1.0.32-android-v32-signed-mapping.txt` | Build R8 firmado; el AAB incluye `proguard.map` en `BUNDLE-METADATA` |
 | Android smoke | Instalación con `adb install -r`, apertura de `MainActivity` en `NOD_Pixel` | APK instalado; onboarding, login Customer QA y dashboard visibles |
 | Google Android | Botón Google del APK v32 | Google Play Services abrió `Sign in`; no se completó porque el emulador no tenía cuenta Google |
-| SHA del APK local | `apksigner verify --print-certs dist/NOD-1.0.32-android-v32.apk` | SHA-1 `5e8f16062ea3cd2c4a0d547876baa6f38cabf625`; SHA-256 `fac61745dc0903786fb9ede62a962b399f7348f0bb6f899b8332667591033b9c` |
+| SHA del APK firmado | `apksigner verify --print-certs dist/NOD-1.0.32-android-v32-signed.apk` | SHA-1 `C9:37:44:C3:3C:D1:14:CD:A8:EF:B1:D2:8C:9A:7E:29:48:E1:74:38`; SHA-256 `AF:67:D9:4B:0E:29:62:9C:7A:D2:9C:C4:C5:0D:27:F2:AC:13:43:DF:AA:D6:CB:CB:CB:AE:8D:50:08:39:A8:B3` |
 | Mercado Pago | Reserva QA `1bb95a03-c828-4de8-830d-d0341bea14c0`; checkout sandbox `x.mercadopago.cl` | `unpaid`/`pending`; formulario de tarjeta visible; sin cobro ni webhook `paid` |
 
 La evidencia de build y mapping queda en `dist/` local; el APK/AAB están ignorados por Git y el mapping está permitido/versionado. La evidencia de ejecución E2E queda además resumida en los JSON de salida de cada script durante la ejecución; las cuentas y tokens QA no se documentan para no exponer credenciales.

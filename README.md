@@ -8,10 +8,10 @@ Aplicación móvil de NOD para clientes y proveedores de servicios de mascotas. 
 
 | Plataforma | Versión | Build | Identificador | Estado |
 |---|---:|---:|---|---|
-| Android | `1.0.32` | `versionCode 32` | `com.nod.mobile` | APK y AAB release generados; R8 y Google Web Client ID verificados |
+| Android | `1.0.32` | `versionCode 32` | `com.nod.mobile` | APK y AAB release firmados con upload key de producción; R8, mapping y Google Web Client ID verificados |
 | iOS | `1.0.32` | `buildNumber 1` | `com.nod.mobile` | Configurado en Expo; IPA y distribución pendientes |
 
-Android y iOS comparten el código funcional y la versión pública `1.0.32`. La compilación Android fue validada localmente con R8, `mapping.txt` y `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`; la versión iOS todavía debe compilarse y probarse en Xcode/EAS con certificados, provisioning profile, APNs y credenciales OAuth de iOS.
+Android y iOS comparten el código funcional y la versión pública `1.0.32`. La compilación Android fue validada localmente con R8, `mapping.txt`, `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` y la upload key de producción; la versión iOS todavía debe compilarse y probarse en Xcode/EAS con certificados, provisioning profile, APNs y credenciales OAuth de iOS.
 
 ## Estado funcional
 
@@ -68,7 +68,7 @@ La ejecución verificable de este checkout quedó así: `npm run validate` **39/
 
 El estado detallado de las pruebas pendientes del 23 de octubre es: Google Android **parcial** —el APK abre Google Play Services y llega a la pantalla nativa de inicio de sesión, pero el emulador no tiene una cuenta Google; no se pudo completar registro/login ni confirmar la configuración del cliente OAuth Android—; Google iOS **no probado** —falta `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`, firma y dispositivo—; push externo **no probado** —faltan EAS, FCM/APNs y tokens reales—; Mercado Pago **hasta checkout** —se llegó a `unpaid`/`pending` y al formulario de tarjeta sandbox, sin webhook `paid`—; dispositivos físicos **no probados**; iOS nativo **no probado** —solo export JavaScript—; moderación administrativa **no probada con privilegio `admin:moderation`**. El APK v32 sí fue instalado en `NOD_Pixel`, se abrió, se inició sesión con Customer QA y se verificó el dashboard.
 
-La prueba Android usa el certificado debug del APK local: SHA-1 `5e8f16062ea3cd2c4a0d547876baa6f38cabf625` y SHA-256 `fac61745dc0903786fb9ede62a962b399f7348f0bb6f899b8332667591033b9c`. Estas huellas no sustituyen las de la upload key/Play App Signing de producción.
+El build publicable v32 usa la upload key `nod-upload`: SHA-1 `C9:37:44:C3:3C:D1:14:CD:A8:EF:B1:D2:8C:9A:7E:29:48:E1:74:38` y SHA-256 `AF:67:D9:4B:0E:29:62:9C:7A:D2:9C:C4:C5:0D:27:F2:AC:13:43:DF:AA:D6:CB:CB:CB:AE:8D:50:08:39:A8:B3`. El rechazo anterior se debió a que el AAB v32 subido estaba firmado con debug (SHA-1 `5E:8F:16:06:2E:A3:CD:2C:4A:0D:54:78:76:BA:A6:F3:8C:AB:F6:25`).
 
 El smoke Android instaló `NOD-1.0.32-android-v32.apk` en el AVD `NOD_Pixel`, confirmó `versionName 1.0.32`, `versionCode 32`, el arranque de `com.nod.mobile`, onboarding, login Customer QA y dashboard. El flujo manual anterior de reserva en Providencia llegó al checkout Mercado Pago sandbox con `Casa NOD con patio en Providencia` por `$10.000` y formulario de tarjeta, sin confirmar el pago; ese recorrido no se debe interpretar como pago completo ni como certificación física del v32. El Web Client ID está incluido; aún falta certificar OAuth con el cliente Android de producción y un dispositivo físico.
 
@@ -132,7 +132,8 @@ La gamificación persistente también quedó recertificada: después de publicar
 - [ ] Incorporar disponibilidad horaria avanzada al filtro de proveedores.
 - [ ] Completar accesibilidad y pruebas con lector de pantalla y texto ampliado.
 - [x] Configurar upload key Android de producción y generar el AAB `1.0.30 (30)` para Google Play.
-- [x] Generar APK/AAB `1.0.32 (32)` con R8, `mapping.txt` y Web Client ID; falta cargar el AAB en la pista interna de Google Play.
+- [x] Generar y verificar APK/AAB `1.0.32 (32)` con R8, `mapping.txt`, Web Client ID y upload key de producción.
+- [ ] Cargar el AAB firmado v32 en la pista interna de Google Play.
 - [ ] Configurar certificados y perfiles de distribución iOS.
 - [ ] Completar revisión jurídica e identidad legal de privacidad, términos y eliminación; las páginas públicas ya responden `200`.
 - [ ] Preparar capturas, fichas de tienda, Data Safety y Privacy Nutrition Labels.
@@ -204,7 +205,7 @@ JAVA_HOME=/ruta/al/jdk-17 \
 
 El `.aab` queda en `android/app/build/outputs/bundle/release/app-release.aab`. Con R8 activado, `mapping.txt` queda en `android/app/build/outputs/mapping/release/mapping.txt` y también se incluye en los metadatos del AAB. La upload key y sus contraseñas deben mantenerse fuera de Git, respaldarse en un gestor seguro y reutilizarse para las próximas versiones.
 
-Los artefactos locales recién generados también están copiados en `dist/NOD-1.0.32-android-v32.apk`, `dist/NOD-1.0.32-android-v32-play.aab` y `dist/NOD-1.0.32-android-v32-mapping.txt`; esta verificación local usa la clave debug. Para publicar, se debe regenerar con la upload key `nod-upload`; el APK declara `versionName 1.0.32`, `versionCode 32`, `minSdk 24` y `targetSdk 36`. Google Play App Signing debe estar habilitado para la publicación.
+Los artefactos firmados para publicar están copiados en `dist/NOD-1.0.32-android-v32-play-signed.aab`, `dist/NOD-1.0.32-android-v32-signed.apk` y `dist/NOD-1.0.32-android-v32-signed-mapping.txt`. La verificación confirmó `versionName 1.0.32`, `versionCode 32`, `minSdk 24`, `targetSdk 36` y la SHA-1 esperada por Google Play. El mapping también está dentro de los metadatos del AAB; el archivo separado se conserva para subirlo a Play Console si lo solicita. Google Play App Signing debe estar habilitado para la publicación.
 
 Build remoto con EAS:
 

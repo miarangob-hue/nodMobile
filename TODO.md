@@ -68,7 +68,8 @@ Evidencia detallada, comandos, IDs QA, artefactos Android y huellas del APK: [`d
 ## Publicación
 
 - [x] Configurar upload key Android de producción y generar el AAB firmado `1.0.30 (30)`; falta cargarlo y habilitar Play App Signing en Play Console.
-- [x] Generar y verificar nuevamente el APK y AAB `1.0.32 (32)` después de corregir cobertura, con R8, `mapping.txt`, Web Client ID y el ajuste final de `pet_ids`; falta subir el AAB a la pista correspondiente de Google Play.
+- [x] Generar y verificar APK y AAB `1.0.32 (32)` con R8, `mapping.txt`, Web Client ID y upload key de producción; SHA-1 `C9:37:44:C3:3C:D1:14:CD:A8:EF:B1:D2:8C:9A:7E:29:48:E1:74:38` coincide con la esperada por Google Play.
+- [ ] Subir `dist/NOD-1.0.32-android-v32-play-signed.aab` a la pista interna de Google Play y confirmar que la consola lo acepta.
 - [ ] Configurar certificados y perfiles de distribución iOS.
 - [ ] Preparar íconos, capturas, ficha de tienda y política de privacidad.
 - [ ] Completar la lista consolidada de [`docs/PENDIENTES.md`](docs/PENDIENTES.md).
