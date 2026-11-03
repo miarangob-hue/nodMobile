@@ -23,8 +23,26 @@ import { saveSession, type Session } from "../storage/session";
 const countryCodes = [
   { code: "+56", label: "🇨🇱 Chile" },
   { code: "+54", label: "🇦🇷 Argentina" },
+  { code: "+591", label: "🇧🇴 Bolivia" },
+  { code: "+55", label: "🇧🇷 Brasil" },
+  { code: "+57", label: "🇨🇴 Colombia" },
+  { code: "+506", label: "🇨🇷 Costa Rica" },
+  { code: "+53", label: "🇨🇺 Cuba" },
+  { code: "+593", label: "🇪🇨 Ecuador" },
+  { code: "+503", label: "🇸🇻 El Salvador" },
+  { code: "+34", label: "🇪🇸 España" },
+  { code: "+1", label: "🇺🇸 Estados Unidos" },
+  { code: "+502", label: "🇬🇹 Guatemala" },
+  { code: "+504", label: "🇭🇳 Honduras" },
+  { code: "+52", label: "🇲🇽 México" },
+  { code: "+505", label: "🇳🇮 Nicaragua" },
+  { code: "+507", label: "🇵🇦 Panamá" },
+  { code: "+595", label: "🇵🇾 Paraguay" },
   { code: "+51", label: "🇵🇪 Perú" },
-  { code: "+591", label: "🇧🇴 Bolivia" }
+  { code: "+1", label: "🇵🇷 Puerto Rico" },
+  { code: "+1", label: "🇩🇴 República Dominicana" },
+  { code: "+598", label: "🇺🇾 Uruguay" },
+  { code: "+58", label: "🇻🇪 Venezuela" }
 ];
 
 type Props = {
@@ -284,7 +302,7 @@ export function RegisterCustomerScreen({ onBack, onGoogleAuthenticated }: Props)
             </Pressable>
             <TextInput autoCorrect={false} keyboardType="phone-pad" onChangeText={setPhone} onFocus={() => revealField(330)} placeholder="9 1234 5678" showSoftInputOnFocus style={[styles.input, styles.phoneInput]} textContentType="telephoneNumber" value={phone} />
           </View>
-          {showCountryCodes ? <View style={styles.dropdown}>{countryCodes.map((item) => <Pressable key={item.code} onPress={() => { setCountryCode(item.code); setShowCountryCodes(false); }} style={styles.dropdownItem}><Text style={styles.dropdownText}>{item.label} · {item.code}</Text></Pressable>)}</View> : null}
+          {showCountryCodes ? <View style={styles.dropdown}>{countryCodes.map((item) => <Pressable key={item.label} onPress={() => { setCountryCode(item.code); setShowCountryCodes(false); }} style={styles.dropdownItem}><Text style={styles.dropdownText}>{item.label} · {item.code}</Text></Pressable>)}</View> : null}
           <TextInput
             autoCapitalize="characters"
             autoCorrect={false}
