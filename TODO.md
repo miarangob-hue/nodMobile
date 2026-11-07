@@ -2,6 +2,21 @@
 
 ## Prioridad alta
 
+### NOD Home — integración mobile v1
+
+- [x] Integrar catálogo Home en la app nativa compartida Android/iOS.
+- [x] Implementar wizard de solicitud con preguntas dinámicas, descripción, dirección y fotografías.
+- [x] Implementar listado y detalle de solicitudes Home.
+- [x] Implementar cotizaciones, aceptación y pago con Créditos NOD.
+- [x] Implementar cancelación, chat, finalización, reseña y disputa.
+- [x] Implementar bandeja Provider de oportunidades Home y emisión de cotizaciones.
+- [x] Incorporar idempotencia y headers de Home sin API key maestra en mobile.
+- [x] Exportar bundle Android e iOS con el módulo Home integrado.
+- [ ] Probar el flujo Home autenticado contra datos reales en Android físico.
+- [ ] Probar el flujo Home autenticado contra datos reales en iPhone físico.
+- [ ] Confirmar con backend el gateway final `api.nodnova.com/v1` y actualizar `EXPO_PUBLIC_NOD_HOME_API_BASE_URL`.
+- [ ] Certificar fotos, chat, pago, reembolso, disputa y push con cuentas QA desechables.
+
 - [x] Crear, listar y cancelar reservas directamente en Provider como fuente única de datos.
 - [x] Verificar aceptación y ciclo completo en Provider sobre el mismo `booking_id`.
 - [x] Integrar pagos Customer con reservas Provider y alinear Checkout Pro, estado consolidado e idempotencia de Créditos NOD.

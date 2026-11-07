@@ -30,6 +30,43 @@ Android y iOS comparten el código funcional y la versión pública `1.0.32`. La
 - Wallet, pagos con Créditos NOD y flujo de Mercado Pago.
 - Solicitud autenticada de eliminación de cuentas de cliente.
 
+### NOD Home — primera versión nativa integrada
+
+NOD Home está integrado dentro de la misma aplicación React Native + Expo para Android e iOS. No es una web separada ni un proyecto mobile independiente.
+
+#### Cliente
+
+- Catálogo de servicios del hogar con preguntas dinámicas.
+- Creación de solicitudes con descripción, dirección y fotografías.
+- Listado y detalle de solicitudes.
+- Matching y cotizaciones de profesionales.
+- Aceptación de cotización y pago con Créditos NOD.
+- Cancelación, chat, finalización, reseña y disputa.
+- Estados separados de servicio y pago.
+
+#### Provider
+
+- Bandeja de oportunidades NOD Home.
+- Aceptación o descarte de oportunidades.
+- Emisión de cotizaciones con precio, garantía y duración estimada.
+
+#### Contrato técnico
+
+- Cliente consume el endpoint Home sin enviar API keys maestras.
+- Mutaciones críticas utilizan `Idempotency-Key`.
+- La URL puede cambiarse con `EXPO_PUBLIC_NOD_HOME_API_BASE_URL`.
+- El valor por defecto actual apunta a las Supabase Functions existentes; cuando esté disponible el gateway oficial se debe configurar `https://api.nodnova.com/v1`.
+
+Validación de esta integración: TypeScript correcto, **39/39 pruebas**, bundle Android exportado y bundle iOS exportado correctamente.
+
+Smoke visual Android capturado en `NOD_Pixel`:
+
+![NOD onboarding Android](docs/screenshots/android-onboarding.png)
+
+![NOD acceso cliente Android](docs/screenshots/android-login.png)
+
+Estas capturas verifican el arranque nativo y la entrada al módulo cliente. La captura autenticada específica de Home queda pendiente de repetir con una cuenta QA desechable.
+
 La validación local actual ejecuta **39 pruebas** y TypeScript sin errores. La certificación E2E fue repetida el **21 de octubre de 2026** contra los backends desplegados, incluyendo registros Customer y Provider completamente nuevos.
 
 ### Matriz E2E — 21 de octubre de 2026

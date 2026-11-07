@@ -89,6 +89,7 @@ import { getChileanComunas } from "../api/onboarding";
 import { isActiveStatus, isUpcomingStatus } from "../utils/bookingStatus";
 import { normalizeBookingStatus, normalizeText } from "../utils/normalization";
 import { env } from "../config/env";
+import { HomeServicesScreen } from "./HomeServicesScreen";
 
 type CustomerSpotUnlock = CommunitySpot & {
   photo_uri?: string | null;
@@ -119,6 +120,7 @@ type InsurancePlan = {
 
 type CustomerView =
   | "home"
+  | "home_services"
   | "explore"
   | "booking"
   | "pets"
@@ -423,6 +425,10 @@ export function CustomerAppScreen({ accessToken, customer, onLogout, pushIntent,
       return <ExploreView customer={profile} onOpenProvider={openProvider} providers={providers} services={services} onSearch={loadProviders} />;
     }
 
+    if (activeView === "home_services") {
+      return <HomeServicesScreen accessToken={accessToken} customer={profile} onExit={() => setActiveView("home")} />;
+    }
+
     if (activeView === "booking" && selectedProvider) {
       return (
         <CreateBookingView
@@ -620,6 +626,7 @@ export function CustomerAppScreen({ accessToken, customer, onLogout, pushIntent,
       <View style={styles.bottomNav}>
         {([
           ["home", "home", "Inicio"],
+          ["home_services", "home", "Hogar"],
           ["explore", "search", "Servicios"],
           ["dog_match", "heart", "Matches"],
           ["activity", "calendar", "Reservas"],
@@ -646,6 +653,7 @@ function getCustomerViewFromPush(data: PushNotificationData): CustomerView {
 
   if (/match|dating|chat|message/.test(target)) return "dog_match";
   if (/hosting|residential|boarding|hospedaje/.test(target)) return "residential";
+  if (/home|hogar|plumbing|gasfiteria|cleaning/.test(target)) return "home_services";
   if (/booking|reservation|walk|service|tracking/.test(target)) return "activity";
   if (/wallet|payment|payout/.test(target)) return "wallet";
   if (/insurance/.test(target)) return "insurance";
@@ -710,6 +718,10 @@ function HomeView({
             <Feather color="#ffffff" name="moon" size={18} />
             <Text style={styles.heroSecondaryButtonText}>Alojamiento</Text>
           </Pressable>
+          <Pressable onPress={() => onViewChange("home_services")} style={styles.heroSecondaryButton}>
+            <Feather color="#ffffff" name="home" size={18} />
+            <Text style={styles.heroSecondaryButtonText}>Hogar</Text>
+          </Pressable>
         </View>
       </View>
 
@@ -743,6 +755,7 @@ function HomeView({
       </View>
 
       <View style={styles.quickGrid}>
+        <QuickAction icon="home" label="NOD Home" onPress={() => onViewChange("home_services")} />
         <QuickAction icon="search" label="Explorar" onPress={() => void onSearch(services[0]?.value)} />
         <QuickAction icon="heart" label="Mascotas" onPress={() => onViewChange("pets")} />
         <QuickAction icon="zap" label="Conecta mascotas" onPress={() => onViewChange("dog_match")} />
@@ -3240,6 +3253,7 @@ function getViewTitle(view: CustomerView) {
     dog_match: "Conecta mascotas",
     explore: "Explorar",
     home: "Inicio",
+    home_services: "NOD Home",
     insurance: "Seguros",
     safety: "Centro de seguridad",
     pets: "Mascotas",

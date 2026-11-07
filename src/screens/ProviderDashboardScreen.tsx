@@ -102,6 +102,7 @@ import type {
 } from "../types/api";
 import { canProviderAcceptStatus } from "../utils/bookingStatus";
 import { normalizeBookingStatus } from "../utils/normalization";
+import { ProviderHomeScreen } from "./ProviderHomeScreen";
 
 type Props = {
   provider: Provider;
@@ -114,6 +115,7 @@ type Props = {
 type BookingAction = "accept" | "reject" | "start" | "complete" | "cancel" | "photo" | "pause" | "resume" | "incident";
 type DashboardView =
   | "home"
+  | "home_services"
   | "requests"
   | "schedule"
   | "reservations"
@@ -672,6 +674,10 @@ export function ProviderDashboardScreen({ provider, accessToken, onLogout, pushI
     );
   }
 
+  if (activeView === "home_services") {
+    return <ProviderHomeScreen accessToken={accessToken} onBack={() => setActiveView("home")} />;
+  }
+
   if (activeView !== "home") {
     return (
       <DashboardDrillDown
@@ -875,6 +881,7 @@ export function ProviderDashboardScreen({ provider, accessToken, onLogout, pushI
 
             <View style={styles.quickGrid}>
               <QuickAction icon="briefcase" label="Wallet" onPress={() => setActiveView("wallet")} />
+              <QuickAction icon="home" label="NOD Home" onPress={() => setActiveView("home_services")} />
               <QuickAction icon="user" label="Perfil" onPress={() => setActiveView("profile")} />
               <QuickAction icon="credit-card" label="Pagos" onPress={() => setActiveView("earnings")} />
               <QuickAction icon="map-pin" label="Zonas" onPress={() => setActiveView("zones")} />
@@ -3163,6 +3170,7 @@ function appendRoutePoint(route: ServiceLocation[], location: ServiceLocation) {
 function getViewTitle(view: DashboardView) {
   const titles: Record<DashboardView, string> = {
     home: "Dashboard",
+    home_services: "NOD Home",
     requests: "Solicitudes",
     schedule: "Agenda",
     reservations: "Reservas",
@@ -3185,6 +3193,7 @@ function getViewTitle(view: DashboardView) {
 function getEmptyText(view: DashboardView) {
   const messages: Record<DashboardView, string> = {
     home: "No hay informacion disponible.",
+    home_services: "No hay oportunidades Home disponibles.",
     requests: "No tienes solicitudes pendientes.",
     schedule: "No hay paseos agendados o en curso.",
     reservations: "No hay reservas registradas.",

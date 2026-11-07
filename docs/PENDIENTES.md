@@ -2,8 +2,7 @@
 
 > **Canal Oficial de Peticiones Backend:** Para solicitar nuevos endpoints, modificaciones de contratos o revisiones arquitectónicas, consulta y añade tu solicitud en [](./CANAL_PETICIONES_BACKEND.md). El equipo de backend procesa y responde las solicitudes directamente en ese archivo.
 
-
-Última actualización: 27 de octubre de 2026. Código actual: `1.0.32` (`versionCode 32`).
+Última actualización: 7 de noviembre de 2026. Código actual: `1.0.32` (`versionCode 32`).
 
 ## Resumen ejecutivo
 
@@ -15,6 +14,40 @@ Orden recomendado:
 2. **P1 — Antes de abrir la app al público:** terminar pagos, Google OAuth, push, documentos legales y pruebas físicas Android.
 3. **P1 iOS — Antes de publicar en App Store:** certificados, IPA, OAuth/APNs y pruebas físicas iPhone.
 4. **P2 — Después de estabilizar el lanzamiento:** accesibilidad avanzada, moderación, disponibilidad horaria y pruebas destructivas controladas.
+
+## NOD Home — primera versión integrada
+
+La primera versión nativa de NOD Home quedó integrada en la app React Native + Expo compartida por Android e iOS.
+
+### Implementado
+
+- Catálogo Home con servicios y preguntas dinámicas.
+- Solicitud de servicio con descripción, dirección y fotos base64.
+- Listado y detalle de solicitudes.
+- Cotizaciones, aceptación y pago con Créditos NOD.
+- Cancelación, chat, finalización, reseñas y disputas.
+- Oportunidades Home para Provider y emisión de cotizaciones.
+- Idempotencia para mutaciones críticas.
+- Base URL configurable mediante `EXPO_PUBLIC_NOD_HOME_API_BASE_URL`.
+- Sin envío de API keys maestras desde las pantallas Home mobile.
+- Bundle Android e iOS exportado correctamente.
+
+### Pendiente de certificación
+
+- Flujo autenticado Home en Android físico.
+- Flujo autenticado Home en iPhone físico.
+- Confirmación del gateway oficial `https://api.nodnova.com/v1`.
+- Fotos privadas con URLs firmadas en flujo de producción.
+- Pago exitoso, reembolso, liquidación y conciliación con cuentas QA desechables.
+- Push, chat y disputa contra servicios externos reales.
+
+### Archivos principales
+
+```text
+src/api/home.ts
+src/screens/HomeServicesScreen.tsx
+src/screens/ProviderHomeScreen.tsx
+```
 
 ## P0 — Bloqueantes de la próxima entrega Android
 

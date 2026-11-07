@@ -9,6 +9,7 @@ declare namespace NodeJS {
     EXPO_PUBLIC_NOD_CUSTOMER_API_KEY?: string;
     EXPO_PUBLIC_NOD_CLIENT_API_KEY?: string;
     EXPO_PUBLIC_NOD_CUSTOMER_API_BASE_URL?: string;
+    EXPO_PUBLIC_NOD_HOME_API_BASE_URL?: string;
     EXPO_PUBLIC_NOD_ADMIN_API_BASE_URL?: string;
     EXPO_PUBLIC_NOD_ADMIN_API_KEY?: string;
   };

@@ -1,6 +1,7 @@
 const defaultBaseUrl = "https://qhekasefqqoiibjvhfvy.supabase.co/functions/v1";
 const defaultCatalogBaseUrl = "https://uzirhdcwtylpmpbfjkzv.supabase.co/functions/v1";
 const defaultCustomerBaseUrl = "https://erssscbpzsosmvpusnru.supabase.co/functions/v1/nod-api";
+const defaultHomeBaseUrl = "https://erssscbpzsosmvpusnru.supabase.co/functions/v1";
 
 export const env = {
   googleWebClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ?? "",
@@ -16,6 +17,7 @@ export const env = {
     process.env.EXPO_PUBLIC_NOD_CLIENT_API_KEY ??
     "",
   customerApiBaseUrl: process.env.EXPO_PUBLIC_NOD_CUSTOMER_API_BASE_URL ?? defaultCustomerBaseUrl,
+  homeApiBaseUrl: process.env.EXPO_PUBLIC_NOD_HOME_API_BASE_URL ?? defaultHomeBaseUrl,
   adminApiBaseUrl: process.env.EXPO_PUBLIC_NOD_ADMIN_API_BASE_URL ?? defaultCatalogBaseUrl,
   adminApiKey: process.env.EXPO_PUBLIC_NOD_ADMIN_API_KEY ?? ""
 };

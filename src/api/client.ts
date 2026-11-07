@@ -9,6 +9,8 @@ type RequestOptions = {
   apiKeyKind?: "provider" | "customer";
   omitApiKey?: boolean;
   warnOnError?: boolean;
+  headers?: Record<string, string>;
+  baseUrlOverride?: string;
 };
 
 export class ApiError extends Error {
@@ -32,8 +34,8 @@ function getBaseUrl(apiKeyKind: RequestOptions["apiKeyKind"]) {
   return env.apiBaseUrl;
 }
 
-function buildUrl(path: string, query?: RequestOptions["query"], apiKeyKind?: RequestOptions["apiKeyKind"]) {
-  const url = new URL(`${getBaseUrl(apiKeyKind)}${path}`);
+function buildUrl(path: string, query?: RequestOptions["query"], apiKeyKind?: RequestOptions["apiKeyKind"], baseUrlOverride?: string) {
+  const url = new URL(`${baseUrlOverride ?? getBaseUrl(apiKeyKind)}${path}`);
 
   Object.entries(query ?? {}).forEach(([key, value]) => {
     if (value !== undefined && value !== null && value !== "") {
@@ -89,11 +91,11 @@ async function parseResponse(path: string, method: string, response: Response, w
 }
 
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const url = buildUrl(path, options.query, options.apiKeyKind);
+  const url = buildUrl(path, options.query, options.apiKeyKind, options.baseUrlOverride);
   const method = options.method ?? "GET";
   const response = await fetch(url, {
     method,
-    headers: buildHeaders(options.accessToken, "application/json", options.apiKeyKind, options.omitApiKey),
+    headers: { ...buildHeaders(options.accessToken, "application/json", options.apiKeyKind, options.omitApiKey), ...(options.headers ?? {}) },
     body: options.body ? JSON.stringify(options.body) : undefined
   });
 
