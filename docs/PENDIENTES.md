@@ -1,5 +1,8 @@
 # Pendientes de NOD Mobile
 
+> **Canal Oficial de Peticiones Backend:** Para solicitar nuevos endpoints, modificaciones de contratos o revisiones arquitectónicas, consulta y añade tu solicitud en [](./CANAL_PETICIONES_BACKEND.md). El equipo de backend procesa y responde las solicitudes directamente en ese archivo.
+
+
 Última actualización: 27 de octubre de 2026. Código actual: `1.0.32` (`versionCode 32`).
 
 ## Resumen ejecutivo
