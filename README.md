@@ -34,7 +34,7 @@ Android y iOS comparten el código funcional y la versión pública `1.0.32`. La
 
 NOD Home está integrado dentro de la misma aplicación React Native + Expo para Android e iOS. No es una web separada ni un proyecto mobile independiente.
 
-Después del login de cliente se muestra un selector de producto: Mascotas o Hogar. Todo lo que ya existía en NOD pertenece a Mascotas. Hogar es el nuevo producto; sus servicios concretos llegan desde el catálogo del backend —actualmente hay dos y el diseño permite crecer a miles sin agregar pantallas ni opciones manualmente—. El botón de producto visible en el dashboard permite cambiar entre Mascotas y Hogar sin cerrar sesión.
+Después del login de cliente se muestra un selector de producto: Mascotas o Hogar. Todo lo que ya existía en NOD pertenece a Mascotas. Hogar es el nuevo producto; sus servicios concretos llegan desde el catálogo del backend —el catálogo desplegado actualmente devuelve **15 servicios** y el diseño permite crecer sin agregar pantallas ni opciones manualmente—. El botón de producto visible en el dashboard permite cambiar entre Mascotas y Hogar sin cerrar sesión.
 
 #### Cliente
 
@@ -60,6 +60,8 @@ Después del login de cliente se muestra un selector de producto: Mascotas o Hog
 - El valor por defecto actual apunta a las Supabase Functions existentes; cuando esté disponible el gateway oficial se debe configurar `https://api.nodnova.com/v1`.
 
 Validación de esta integración: TypeScript correcto, **39/39 pruebas**, bundle Android exportado y bundle iOS exportado correctamente.
+
+E2E NOD Home ejecutado el **8 de noviembre de 2026** con `npm run test:e2e:home`: **13/13 checks aprobados**. La prueba creó una cuenta Customer desechable, inició sesión, cargó el catálogo real de 15 servicios, respondió una pregunta dinámica, creó una solicitud, repitió la mutación con la misma `Idempotency-Key`, verificó listado y detalle, y canceló la solicitud. También confirmó que el endpoint Provider Home rechaza correctamente una llamada sin JWT (`401`).
 
 Smoke visual Android capturado en `NOD_Pixel`:
 

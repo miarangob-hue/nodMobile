@@ -2,7 +2,7 @@
 
 > **Canal Oficial de Peticiones Backend:** Para solicitar nuevos endpoints, modificaciones de contratos o revisiones arquitectónicas, consulta y añade tu solicitud en [](./CANAL_PETICIONES_BACKEND.md). El equipo de backend procesa y responde las solicitudes directamente en ese archivo.
 
-Última actualización: 7 de noviembre de 2026. Código actual: `1.0.32` (`versionCode 32`).
+Última actualización: 8 de noviembre de 2026. Código actual: `1.0.32` (`versionCode 32`).
 
 ## Resumen ejecutivo
 
@@ -23,7 +23,7 @@ La primera versión nativa de NOD Home quedó integrada en la app React Native +
 
 - Selector de producto posterior al login Customer: Mascotas y Hogar.
 - Cambio de producto desde el dashboard sin cerrar sesión.
-- Catálogo Hogar dinámico desde backend: actualmente dos servicios, preparado para crecer a miles.
+- Catálogo Hogar dinámico desde backend: el despliegue probado devuelve 15 servicios, preparado para crecer sin cambios en la navegación mobile.
 - Catálogo Home con servicios y preguntas dinámicas.
 - Solicitud de servicio con descripción, dirección y fotos base64.
 - Listado y detalle de solicitudes.
@@ -37,6 +37,7 @@ La primera versión nativa de NOD Home quedó integrada en la app React Native +
 
 ### Pendiente de certificación
 
+- E2E Provider Home completo: oportunidad, aceptación, cotización y ciclo visto por Customer; falta configurar credenciales/fixture Provider QA.
 - Flujo autenticado Home en Android físico.
 - Flujo autenticado Home en iPhone físico.
 - Confirmación del gateway oficial `https://api.nodnova.com/v1`.
@@ -51,6 +52,23 @@ src/api/home.ts
 src/screens/HomeServicesScreen.tsx
 src/screens/ProviderHomeScreen.tsx
 ```
+
+### E2E Home — 8 de noviembre de 2026
+
+Comando reproducible: `npm run test:e2e:home`.
+
+Resultado: **13/13 checks aprobados** contra el backend desplegado usando una cuenta Customer desechable. Se verificó:
+
+- registro y login Customer;
+- catálogo Home real con **15 servicios**;
+- pregunta dinámica y selección de respuesta;
+- creación de solicitud con dirección, comuna y respuestas;
+- repetición con la misma `Idempotency-Key` devolviendo la misma solicitud;
+- aparición en listado y recuperación del detalle;
+- cancelación de la solicitud;
+- protección del endpoint Provider Home sin JWT (`401`).
+
+Durante la certificación se corrigieron dos diferencias entre el contrato escrito y el backend desplegado: la solicitud requiere `address` y `commune` como campos de primer nivel, y las respuestas de preguntas usan la `key` corta de la pregunta con opciones `{ label, value }`. Mobile quedó alineado con el comportamiento real desplegado.
 
 ## P0 — Bloqueantes de la próxima entrega Android
 
@@ -171,6 +189,7 @@ No debe confundirse esta sección con trabajo pendiente:
 | Registro Provider | `node --env-file=.env scripts/e2e-provider-registration.mjs` | **10/10**; cuenta QA creada y onboarding persistido |
 | E2E dos clientes | `node --env-file=.env scripts/e2e-two-customers.mjs` | **38/38**; match `204ab2c8-399e-4339-9456-b6bb4f1d14de`, Housing `4fc53b18-6a14-4cdd-aa4f-931d2994f019`, servicio `e96fba32-d83a-4f7e-970c-93296dc120b9` |
 | Contratos | `node --env-file=.env scripts/audit-backend-contracts.mjs` | **74/74** endpoints respondiendo |
+| E2E NOD Home Customer | `npm run test:e2e:home` | **13/13**; catálogo real de 15 servicios, solicitud, idempotencia, listado, detalle y cancelación |
 | Smoke API | `npm run test:api` con red autorizada | Endpoints válidos respondieron; respuestas `401/403/404` corresponden a sesiones o IDs inválidos de prueba |
 | APK Android firmado | `dist/NOD-1.0.32-android-v32-signed.apk`, `apksigner verify --print-certs` | `com.nod.mobile`, `versionCode 32`, `versionName 1.0.32`, `minSdk 24`, `targetSdk 36`; SHA-1 de producción verificada |
 | AAB firmado y mapping | `dist/NOD-1.0.32-android-v32-play-signed.aab` y `dist/NOD-1.0.32-android-v32-signed-mapping.txt` | Build R8 firmado; el AAB incluye `proguard.map` en `BUNDLE-METADATA` |

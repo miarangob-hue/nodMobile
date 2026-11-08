@@ -3,10 +3,11 @@ import { env } from "../config/env";
 
 export type HomeServiceQuestion = {
   id: string;
+  key?: string;
   label: string;
   type: "SINGLE_CHOICE" | "MULTI_CHOICE" | "TEXT" | "NUMBER" | "BOOLEAN";
   required?: boolean;
-  options?: string[];
+  options?: Array<{ label: string; value: string }>;
 };
 
 export type HomeService = {

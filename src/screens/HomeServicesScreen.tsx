@@ -108,16 +108,13 @@ export function HomeServicesScreen({ accessToken, customer, onExit }: Props) {
         serviceId: selectedService.id,
         title: description.trim().slice(0, 80),
         description: description.trim(),
-        address: {
-          street: address || customer.address || "",
-          number: "",
-          commune: customer.comuna || "",
-          city: customer.city || "Santiago",
-          region: "Región Metropolitana",
-          latitude: -33.4489,
-          longitude: -70.6693
-        },
-        answers: firstQuestion ? { [firstQuestion.id]: answer } : {},
+        address: address || customer.address || "",
+        commune: customer.comuna || "",
+        city: customer.city || "Santiago",
+        region: "Región Metropolitana",
+        latitude: -33.4489,
+        longitude: -70.6693,
+        answers: firstQuestion ? { [firstQuestion.key ?? firstQuestion.id]: answer } : {},
         photos: photos.map(({ base64, mimeType }) => ({ base64, mimeType })),
         urgency: "FLEXIBLE",
         preferredDates: [],
@@ -245,7 +242,7 @@ export function HomeServicesScreen({ accessToken, customer, onExit }: Props) {
     return <View>
       <BackHeader title="Nueva solicitud" onBack={() => setMode("home")} />
       <View style={styles.heroSmall}><View style={styles.iconCircle}><Feather color="#ffffff" name={serviceIcons[selectedService.id] ?? "home"} size={22} /></View><Text style={styles.heroSmallTitle}>{selectedService.name}</Text><Text style={styles.heroSmallText}>{selectedService.description ?? "Cuéntanos qué necesita tu hogar."}</Text></View>
-      {firstQuestion ? <View style={styles.panel}><Text style={styles.label}>{firstQuestion.label}</Text><View style={styles.optionRow}>{(firstQuestion.options ?? []).map((option) => <Pressable key={option} onPress={() => setAnswer(option)} style={[styles.option, answer === option && styles.optionSelected]}><Text style={[styles.optionText, answer === option && styles.optionTextSelected]}>{option}</Text></Pressable>)}</View></View> : null}
+      {firstQuestion ? <View style={styles.panel}><Text style={styles.label}>{firstQuestion.label}</Text><View style={styles.optionRow}>{(firstQuestion.options ?? []).map((option) => <Pressable key={option.value} onPress={() => setAnswer(option.value)} style={[styles.option, answer === option.value && styles.optionSelected]}><Text style={[styles.optionText, answer === option.value && styles.optionTextSelected]}>{option.label}</Text></Pressable>)}</View></View> : null}
       <View style={styles.panel}><Text style={styles.label}>Describe lo que necesitas</Text><TextInput multiline onChangeText={setDescription} placeholder="Cuéntanos qué ocurre o qué quieres realizar..." style={[styles.input, styles.textArea]} textAlignVertical="top" value={description} /><Pressable onPress={() => void addPhoto()} style={styles.secondaryAction}><Feather color="#254D3C" name="camera" size={16} /><Text style={styles.secondaryActionTextDark}>{photos.length ? `${photos.length} foto(s) agregada(s)` : "Agregar fotos del problema"}</Text></Pressable><Text style={styles.label}>Dirección del servicio</Text><TextInput onChangeText={setAddress} placeholder="Dirección" style={styles.input} value={address} /><Text style={styles.caption}>{customer.comuna || "Santiago"} · Zona cubierta por NOD</Text></View>
       <Pressable disabled={isSaving} onPress={() => void publishRequest()} style={[styles.primaryButton, isSaving && styles.disabled]}><Text style={styles.primaryText}>{isSaving ? "Publicando…" : "Publicar solicitud"}</Text><Feather color="#ffffff" name="arrow-right" size={17} /></Pressable>
     </View>;

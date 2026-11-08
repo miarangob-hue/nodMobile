@@ -14,10 +14,12 @@
 - [x] Implementar bandeja Provider de oportunidades Home y emisión de cotizaciones.
 - [x] Incorporar idempotencia y headers de Home sin API key maestra en mobile.
 - [x] Exportar bundle Android e iOS con el módulo Home integrado.
+- [x] Ejecutar E2E Customer Home contra backend real: catálogo, pregunta dinámica, creación, idempotencia, listado, detalle y cancelación (**13/13**).
+- [ ] Ejecutar E2E completo Provider Home con oportunidad, aceptación, cotización y respuesta Customer; faltan credenciales/fixture Provider QA.
 - [ ] Probar el flujo Home autenticado contra datos reales en Android físico.
 - [ ] Probar el flujo Home autenticado contra datos reales en iPhone físico.
 - [ ] Confirmar con backend el gateway final `api.nodnova.com/v1` y actualizar `EXPO_PUBLIC_NOD_HOME_API_BASE_URL`.
-- [ ] Certificar fotos, chat, pago, reembolso, disputa y push con cuentas QA desechables.
+- [ ] Certificar fotos, chat, pago, reembolso, disputa y push con cuentas QA desechables; el E2E actual cubre solicitud, catálogo, idempotencia, detalle y cancelación.
 
 - [x] Crear, listar y cancelar reservas directamente en Provider como fuente única de datos.
 - [x] Verificar aceptación y ciclo completo en Provider sobre el mismo `booking_id`.

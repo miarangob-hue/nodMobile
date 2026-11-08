@@ -23,7 +23,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "validate": "npm run typecheck && npm test",
-    "test:api": "node --env-file=.env scripts/verify-api-endpoints.mjs"
+    "test:api": "node --env-file=.env scripts/verify-api-endpoints.mjs",
+    "test:e2e:home": "node --env-file=.env scripts/e2e-home.mjs"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",
