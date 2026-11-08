@@ -7,6 +7,7 @@ import { refreshLogin } from "./src/api/auth";
 import { getProviderOnboarding } from "./src/api/onboarding";
 import { CustomerAppScreen } from "./src/screens/CustomerAppScreen";
 import { CompleteCustomerProfileScreen } from "./src/screens/CompleteCustomerProfileScreen";
+import { CustomerServiceSelectionScreen } from "./src/screens/CustomerServiceSelectionScreen";
 import { LoginScreen } from "./src/screens/LoginScreen";
 import { OnboardingScreen } from "./src/screens/OnboardingScreen";
 import { ProviderDashboardScreen } from "./src/screens/ProviderDashboardScreen";
@@ -16,6 +17,7 @@ import { RoleSelectionScreen } from "./src/screens/RoleSelectionScreen";
 import { WelcomeScreen } from "./src/screens/WelcomeScreen";
 import { clearSession, loadSession, saveSession, type Session } from "./src/storage/session";
 import type { Customer, Provider } from "./src/types/api";
+import type { CustomerService } from "./src/types/service";
 import { BrandLogo } from "./src/components/BrandLogo";
 import {
   subscribeToPushNotifications,
@@ -23,13 +25,14 @@ import {
   type PushNotificationData
 } from "./src/services/pushNotifications";
 
-type Route = "loading" | "welcome" | "roleSelection" | "login" | "register" | "registerCustomer" | "completeCustomerProfile" | "customer" | "onboarding" | "verification" | "approved";
+type Route = "loading" | "welcome" | "roleSelection" | "login" | "register" | "registerCustomer" | "completeCustomerProfile" | "customerService" | "customer" | "onboarding" | "verification" | "approved";
 
 export default function App() {
   const [route, setRoute] = useState<Route>("loading");
   const [session, setSession] = useState<Session | null>(null);
   const [provider, setProvider] = useState<Provider | null>(null);
   const [customer, setCustomer] = useState<Customer | null>(null);
+  const [customerService, setCustomerService] = useState<CustomerService>("pet");
   const [notice, setNotice] = useState<string | null>(null);
   const [isRefreshingProvider, setIsRefreshingProvider] = useState(false);
   const [pushIntent, setPushIntent] = useState<{ id: number; data: PushNotificationData } | null>(null);
@@ -117,6 +120,11 @@ export default function App() {
       setSession(nextSession);
       await saveSession(nextSession);
     }
+    setRoute("customerService");
+  }
+
+  function handleCustomerServiceSelected(service: CustomerService) {
+    setCustomerService(service);
     setRoute("customer");
   }
 
@@ -240,9 +248,19 @@ export default function App() {
         <CustomerAppScreen
           accessToken={session?.access_token}
           customer={customer}
+          initialService={customerService}
           onLogout={handleLogout}
+          onChangeService={() => setRoute("customerService")}
           pushIntent={pushIntent}
           onPushIntentHandled={() => setPushIntent(null)}
+        />
+      ) : null}
+
+      {route === "customerService" && customer ? (
+        <CustomerServiceSelectionScreen
+          customerName={customer.first_name ?? customer.email}
+          onLogout={handleLogout}
+          onSelect={handleCustomerServiceSelected}
         />
       ) : null}
 
@@ -264,7 +282,7 @@ function getSessionRoute(session: Session | null): Route {
 
   if (session.customer || session.roles?.some((role) => ["customer", "client"].includes(role))) {
     const customer = getCustomerFromSession(session);
-    return session.is_new_user || !customer?.phone || !customer?.rut ? "completeCustomerProfile" : "customer";
+    return session.is_new_user || !customer?.phone || !customer?.rut ? "completeCustomerProfile" : "customerService";
   }
 
   return getProviderRoute(getProviderFromSession(session));

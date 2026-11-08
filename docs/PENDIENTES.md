@@ -21,6 +21,8 @@ La primera versión nativa de NOD Home quedó integrada en la app React Native +
 
 ### Implementado
 
+- Selector de servicio posterior al login Customer: Mascotas, Hogar, Alojamiento y Comunidad.
+- Cambio de servicio desde el dashboard sin cerrar sesión.
 - Catálogo Home con servicios y preguntas dinámicas.
 - Solicitud de servicio con descripción, dirección y fotos base64.
 - Listado y detalle de solicitudes.

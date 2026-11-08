@@ -90,6 +90,7 @@ import { isActiveStatus, isUpcomingStatus } from "../utils/bookingStatus";
 import { normalizeBookingStatus, normalizeText } from "../utils/normalization";
 import { env } from "../config/env";
 import { HomeServicesScreen } from "./HomeServicesScreen";
+import type { CustomerService } from "../types/service";
 
 type CustomerSpotUnlock = CommunitySpot & {
   photo_uri?: string | null;
@@ -166,7 +167,9 @@ const insurancePlans: InsurancePlan[] = [
 type Props = {
   accessToken?: string | null;
   customer: Customer;
+  initialService?: CustomerService;
   onLogout: () => void;
+  onChangeService: () => void;
   pushIntent?: { id: number; data: PushNotificationData } | null;
   onPushIntentHandled?: () => void;
 };
@@ -175,8 +178,8 @@ type PendingCheckout =
   | { kind: "booking"; bookingId: string }
   | { kind: "topup"; previousCredits: number };
 
-export function CustomerAppScreen({ accessToken, customer, onLogout, pushIntent, onPushIntentHandled }: Props) {
-  const [activeView, setActiveView] = useState<CustomerView>("home");
+export function CustomerAppScreen({ accessToken, customer, initialService = "pet", onLogout, onChangeService, pushIntent, onPushIntentHandled }: Props) {
+  const [activeView, setActiveView] = useState<CustomerView>(getInitialCustomerView(initialService));
   const [profile, setProfile] = useState<Customer>(customer);
   const [pets, setPets] = useState<Pet[]>([]);
   const [bookings, setBookings] = useState<CustomerBooking[]>([]);
@@ -600,6 +603,10 @@ export function CustomerAppScreen({ accessToken, customer, onLogout, pushIntent,
             <Feather color="#626D84" name="bell" size={18} />
             {notifications.some((item) => !item.read_at) ? <View style={styles.topBarNotificationDot} /> : null}
           </Pressable>
+          <Pressable accessibilityLabel="Cambiar servicio" onPress={onChangeService} style={styles.serviceSwitcher}>
+            <Feather color="#EE7C2B" name={initialService === "home" ? "home" : "heart"} size={15} />
+            <Text style={styles.serviceSwitcherText}>{getCustomerServiceLabel(initialService)}</Text>
+          </Pressable>
           <Pressable onPress={onLogout} style={styles.iconButton}>
             <Feather color="#626D84" name="log-out" size={18} />
           </Pressable>
@@ -660,6 +667,17 @@ function getCustomerViewFromPush(data: PushNotificationData): CustomerView {
   if (/pet/.test(target)) return "pets";
   if (/profile/.test(target)) return "profile";
   return "home";
+}
+
+function getInitialCustomerView(service: CustomerService): CustomerView {
+  if (service === "home") return "home_services";
+  if (service === "housing") return "residential";
+  if (service === "community") return "spots";
+  return "home";
+}
+
+function getCustomerServiceLabel(service: CustomerService) {
+  return service === "home" ? "Hogar" : service === "housing" ? "Alojamiento" : service === "community" ? "Comunidad" : "Mascotas";
 }
 
 function HomeView({
@@ -3597,6 +3615,19 @@ const styles = StyleSheet.create({
     height: 44,
     justifyContent: "center",
     width: 44
+  },
+  serviceSwitcher: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 5,
+    marginHorizontal: 8,
+    paddingHorizontal: 5,
+    paddingVertical: 8
+  },
+  serviceSwitcherText: {
+    color: "#626D84",
+    fontSize: 11,
+    fontWeight: "800"
   },
   subHeader: {
     alignItems: "center",

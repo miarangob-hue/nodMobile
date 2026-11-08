@@ -4,6 +4,7 @@
 
 ### NOD Home — integración mobile v1
 
+- [x] Mostrar selector de servicio después del login Customer y permitir cambiar entre módulos sin cerrar sesión.
 - [x] Integrar catálogo Home en la app nativa compartida Android/iOS.
 - [x] Implementar wizard de solicitud con preguntas dinámicas, descripción, dirección y fotografías.
 - [x] Implementar listado y detalle de solicitudes Home.
