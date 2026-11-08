@@ -2,6 +2,7 @@ import { Feather } from "@expo/vector-icons";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { BrandLogo } from "../components/BrandLogo";
 import { customerServices, type CustomerService } from "../types/service";
+import { useState } from "react";
 
 type Props = {
   customerName?: string | null;
@@ -10,51 +11,78 @@ type Props = {
 };
 
 export function CustomerServiceSelectionScreen({ customerName, onLogout, onSelect }: Props) {
+  const [selectedService, setSelectedService] = useState<CustomerService>("pet");
+  const service = customerServices.find((item) => item.id === selectedService) ?? customerServices[0];
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <View style={styles.topBar}>
         <BrandLogo size="medium" />
-        <Pressable accessibilityLabel="Cerrar sesión" onPress={onLogout} style={styles.logout}>
-          <Feather color="#626D84" name="log-out" size={19} />
-        </Pressable>
-      </View>
-
-      <Text style={styles.kicker}>NOD</Text>
-      <Text style={styles.title}>{customerName ? `Hola, ${customerName}` : "Hola"}</Text>
-      <Text style={styles.subtitle}>¿Qué servicio necesitas hoy?</Text>
-      <Text style={styles.helper}>Elige una categoría. Dentro de cada una verás los servicios disponibles.</Text>
-
-      <View style={styles.cards}>
-        {customerServices.map((service) => (
-          <Pressable key={service.id} onPress={() => onSelect(service.id)} style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}>
-            <View style={[styles.icon, { backgroundColor: `${service.color}18` }]}>
-              <Feather color={service.color} name={service.icon} size={25} />
-            </View>
-            <View style={styles.copy}>
-              <Text style={styles.cardTitle}>{service.title}</Text>
-              <Text style={styles.cardDescription}>{service.description}</Text>
-            </View>
-            <Feather color="#626D84" name="chevron-right" size={21} />
+        <View style={styles.topActions}>
+          <Text style={styles.greeting}>{customerName?.split(" ")[0] ?? "Hola"}</Text>
+          <Pressable accessibilityLabel="Cerrar sesión" onPress={onLogout} style={styles.logout}>
+            <Feather color="#626D84" name="log-out" size={18} />
           </Pressable>
-        ))}
+        </View>
       </View>
+
+      <View style={styles.navShell}>
+        {customerServices.map((item) => {
+          const isSelected = item.id === selectedService;
+          return (
+            <Pressable key={item.id} onPress={() => setSelectedService(item.id)} style={styles.navItem}>
+              <Feather color={isSelected ? item.color : "#8992A3"} name={item.icon} size={16} />
+              <Text style={[styles.navLabel, isSelected && { color: item.color }]}>{item.id === "pet" ? "Mascotas" : "Hogar"}</Text>
+              {isSelected ? <View style={[styles.navIndicator, { backgroundColor: item.color }]} /> : null}
+            </Pressable>
+          );
+        })}
+      </View>
+
+      <View style={styles.contentHeader}>
+        <Text style={styles.kicker}>NOD {selectedService === "home" ? "HOME" : "PET"}</Text>
+        <Text style={styles.title}>{selectedService === "home" ? "Servicios para tu hogar" : "Todo para tu mascota"}</Text>
+        <Text style={styles.helper}>{service.description}</Text>
+      </View>
+
+      <View style={[styles.heroCard, { backgroundColor: selectedService === "home" ? "#EAF3ED" : "#FFF0E5" }]}>
+        <View style={[styles.heroIcon, { backgroundColor: `${service.color}22` }]}>
+          <Feather color={service.color} name={service.icon} size={31} />
+        </View>
+        <Text style={styles.heroTitle}>{selectedService === "home" ? "Encuentra ayuda cerca de ti" : "Cuida, conecta y disfruta"}</Text>
+        <Text style={styles.heroText}>{selectedService === "home" ? "Elige uno de los servicios disponibles y solicita una cotización." : "Accede a tus mascotas, paseos, reservas, matches y comunidad."}</Text>
+      </View>
+
+      <Pressable onPress={() => onSelect(selectedService)} style={({ pressed }) => [styles.primaryButton, pressed && styles.buttonPressed]}>
+        <Text style={styles.primaryButtonText}>Entrar a {selectedService === "home" ? "Hogar" : "Mascotas"}</Text>
+        <Feather color="#FFFFFF" name="arrow-right" size={19} />
+      </Pressable>
+
+      <Text style={styles.footerHint}>Puedes cambiar de producto cuando quieras desde el menú superior.</Text>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { backgroundColor: "#FCFAF7", flexGrow: 1, padding: 24, paddingBottom: 40 },
-  topBar: { alignItems: "center", flexDirection: "row", justifyContent: "space-between", marginBottom: 55 },
+  container: { backgroundColor: "#FCFAF7", flexGrow: 1, padding: 20, paddingBottom: 40 },
+  topBar: { alignItems: "center", flexDirection: "row", justifyContent: "space-between", marginBottom: 23 },
+  topActions: { alignItems: "center", flexDirection: "row", gap: 10 },
+  greeting: { color: "#626D84", fontSize: 14, fontWeight: "700" },
   logout: { padding: 8 },
-  kicker: { color: "#EE7C2B", fontSize: 13, fontWeight: "800", letterSpacing: 2, marginBottom: 10 },
-  title: { color: "#1D2330", fontSize: 32, fontWeight: "800", marginBottom: 8 },
-  subtitle: { color: "#1D2330", fontSize: 24, fontWeight: "700", lineHeight: 31 },
-  helper: { color: "#626D84", fontSize: 16, lineHeight: 23, marginBottom: 28, marginTop: 12 },
-  cards: { gap: 14 },
-  card: { alignItems: "center", backgroundColor: "#FFFFFF", borderColor: "#E7E1DA", borderRadius: 20, borderWidth: 1, flexDirection: "row", gap: 14, padding: 17 },
-  cardPressed: { opacity: 0.7, transform: [{ scale: 0.99 }] },
-  icon: { alignItems: "center", borderRadius: 16, height: 53, justifyContent: "center", width: 53 },
-  copy: { flex: 1 },
-  cardTitle: { color: "#1D2330", fontSize: 17, fontWeight: "800", marginBottom: 5 },
-  cardDescription: { color: "#626D84", fontSize: 13, lineHeight: 18 }
+  navShell: { backgroundColor: "#FFFFFF", borderBottomColor: "#E7E1DA", borderBottomWidth: 1, flexDirection: "row", marginHorizontal: -20, paddingHorizontal: 20 },
+  navItem: { alignItems: "center", flex: 1, flexDirection: "row", gap: 7, justifyContent: "center", paddingVertical: 14, position: "relative" },
+  navLabel: { color: "#8992A3", fontSize: 14, fontWeight: "800" },
+  navIndicator: { borderRadius: 3, bottom: -1, height: 3, left: 22, position: "absolute", right: 22 },
+  contentHeader: { paddingTop: 32 },
+  kicker: { color: "#EE7C2B", fontSize: 12, fontWeight: "900", letterSpacing: 2, marginBottom: 8 },
+  title: { color: "#1D2330", fontSize: 29, fontWeight: "800", lineHeight: 35, marginBottom: 9 },
+  helper: { color: "#626D84", fontSize: 16, lineHeight: 23, marginBottom: 23 },
+  heroCard: { borderRadius: 24, gap: 12, marginBottom: 22, padding: 22 },
+  heroIcon: { alignItems: "center", borderRadius: 18, height: 60, justifyContent: "center", width: 60 },
+  heroTitle: { color: "#1D2330", fontSize: 20, fontWeight: "800", marginTop: 4 },
+  heroText: { color: "#626D84", fontSize: 14, lineHeight: 21 },
+  primaryButton: { alignItems: "center", backgroundColor: "#EE7C2B", borderRadius: 15, flexDirection: "row", gap: 12, justifyContent: "center", paddingVertical: 17 },
+  buttonPressed: { opacity: 0.75 },
+  primaryButtonText: { color: "#FFFFFF", fontSize: 16, fontWeight: "800" },
+  footerHint: { color: "#8992A3", fontSize: 12, lineHeight: 18, marginTop: 18, textAlign: "center" }
 });
