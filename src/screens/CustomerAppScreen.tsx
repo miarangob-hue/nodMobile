@@ -671,13 +671,11 @@ function getCustomerViewFromPush(data: PushNotificationData): CustomerView {
 
 function getInitialCustomerView(service: CustomerService): CustomerView {
   if (service === "home") return "home_services";
-  if (service === "housing") return "residential";
-  if (service === "community") return "spots";
   return "home";
 }
 
 function getCustomerServiceLabel(service: CustomerService) {
-  return service === "home" ? "Hogar" : service === "housing" ? "Alojamiento" : service === "community" ? "Comunidad" : "Mascotas";
+  return service === "home" ? "Hogar" : "Mascotas";
 }
 
 function HomeView({

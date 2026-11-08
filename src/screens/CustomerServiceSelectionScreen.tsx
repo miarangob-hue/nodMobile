@@ -22,7 +22,7 @@ export function CustomerServiceSelectionScreen({ customerName, onLogout, onSelec
       <Text style={styles.kicker}>NOD</Text>
       <Text style={styles.title}>{customerName ? `Hola, ${customerName}` : "Hola"}</Text>
       <Text style={styles.subtitle}>¿Qué servicio necesitas hoy?</Text>
-      <Text style={styles.helper}>Elige una categoría para mostrarte la experiencia adecuada.</Text>
+      <Text style={styles.helper}>Elige una categoría. Dentro de cada una verás los servicios disponibles.</Text>
 
       <View style={styles.cards}>
         {customerServices.map((service) => (

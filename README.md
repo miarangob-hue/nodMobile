@@ -34,7 +34,7 @@ Android y iOS comparten el código funcional y la versión pública `1.0.32`. La
 
 NOD Home está integrado dentro de la misma aplicación React Native + Expo para Android e iOS. No es una web separada ni un proyecto mobile independiente.
 
-Después del login de cliente se muestra un selector de servicio. Desde ahí el cliente puede entrar a Mascotas, Hogar, Alojamiento o Comunidad; cada opción abre su pantalla especializada dentro de la misma sesión. El botón de servicio visible en el dashboard permite cambiar de módulo sin cerrar sesión.
+Después del login de cliente se muestra un selector de producto: Mascotas o Hogar. Todo lo que ya existía en NOD pertenece a Mascotas. Hogar es el nuevo producto; sus servicios concretos llegan desde el catálogo del backend —actualmente hay dos y el diseño permite crecer a miles sin agregar pantallas ni opciones manualmente—. El botón de producto visible en el dashboard permite cambiar entre Mascotas y Hogar sin cerrar sesión.
 
 #### Cliente
 
