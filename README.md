@@ -8,7 +8,7 @@ Aplicación móvil de NOD para clientes y proveedores de servicios de mascotas y
 
 | Plataforma | Versión | Build | Identificador | Estado |
 |---|---:|---:|---|---|
-| Android | `1.0.34` | `versionCode 34` | `com.nod.mobile` | APK y AAB release generados y versionados en Git; R8 y mapping incluidos; este build local usa debug keystore |
+| Android | `1.0.34` | `versionCode 34` | `com.nod.mobile` | APK y AAB release generados y versionados en Git; R8, mapping y upload key de producción verificados |
 | iOS | `1.0.34` | `buildNumber 2` | `com.nod.mobile` | Configurado en Expo; IPA y distribución pendientes |
 
 Android y iOS comparten el código funcional y la versión pública `1.0.34`. Después del login de cliente, la app presenta dos productos separados: **NOD Pets** para mascotas y **NOD Home** para servicios del hogar. La versión iOS todavía debe compilarse y probarse en Xcode/EAS con certificados, provisioning profile, APNs y credenciales OAuth de iOS.
@@ -262,7 +262,7 @@ JAVA_HOME=/ruta/al/jdk-17 \
 
 El `.aab` queda en `android/app/build/outputs/bundle/release/app-release.aab`. Con R8 activado, `mapping.txt` queda en `android/app/build/outputs/mapping/release/mapping.txt` y también se incluye en los metadatos del AAB. La upload key y sus contraseñas deben mantenerse fuera de Git, respaldarse en un gestor seguro y reutilizarse para las próximas versiones.
 
-Los artefactos históricos firmados para publicar están copiados en `dist/NOD-1.0.32-android-v32-play-signed.aab`, `dist/NOD-1.0.32-android-v32-signed.apk` y `dist/NOD-1.0.32-android-v32-signed-mapping.txt`. La versión 1.0.34 quedó generada localmente con debug keystore; antes de publicar en Google Play debe repetirse el build con la upload key de producción.
+Los artefactos históricos firmados para publicar están copiados en `dist/NOD-1.0.32-android-v32-play-signed.aab`, `dist/NOD-1.0.32-android-v32-signed.apk` y `dist/NOD-1.0.32-android-v32-signed-mapping.txt`. La versión 1.0.34 fue recompilada con la upload key de producción; su APK y AAB contienen la SHA-1 `C9:37:44:C3:3C:D1:14:CD:A8:EF:B1:D2:8C:9A:7E:29:48:E1:74:38` esperada por Google Play.
 
 Build remoto con EAS:
 
