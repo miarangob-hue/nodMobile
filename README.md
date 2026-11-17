@@ -1,6 +1,6 @@
 # NOD Mobile
 
-Aplicación móvil de NOD para clientes y proveedores de servicios de mascotas. Está construida con React Native y Expo y reúne en una sola aplicación los flujos de cliente, proveedor, comunidad, matches entre mascotas y alojamiento residencial.
+Aplicación móvil de NOD para clientes y proveedores de servicios de mascotas y del hogar. Está construida con React Native y Expo y separa los productos **NOD Pets** y **NOD Home** dentro de la misma aplicación.
 
 **Rama de desarrollo:** `dev`
 
@@ -8,10 +8,10 @@ Aplicación móvil de NOD para clientes y proveedores de servicios de mascotas. 
 
 | Plataforma | Versión | Build | Identificador | Estado |
 |---|---:|---:|---|---|
-| Android | `1.0.32` | `versionCode 32` | `com.nod.mobile` | APK y AAB release firmados con upload key de producción; R8, mapping y Google Web Client ID verificados |
-| iOS | `1.0.32` | `buildNumber 1` | `com.nod.mobile` | Configurado en Expo; IPA y distribución pendientes |
+| Android | `1.0.34` | `versionCode 34` | `com.nod.mobile` | APK y AAB release generados y versionados en Git; R8 y mapping incluidos; este build local usa debug keystore |
+| iOS | `1.0.34` | `buildNumber 2` | `com.nod.mobile` | Configurado en Expo; IPA y distribución pendientes |
 
-Android y iOS comparten el código funcional y la versión pública `1.0.32`. La compilación Android fue validada localmente con R8, `mapping.txt`, `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` y la upload key de producción; la versión iOS todavía debe compilarse y probarse en Xcode/EAS con certificados, provisioning profile, APNs y credenciales OAuth de iOS.
+Android y iOS comparten el código funcional y la versión pública `1.0.34`. Después del login de cliente, la app presenta dos productos separados: **NOD Pets** para mascotas y **NOD Home** para servicios del hogar. La versión iOS todavía debe compilarse y probarse en Xcode/EAS con certificados, provisioning profile, APNs y credenciales OAuth de iOS.
 
 ## Estado funcional
 
@@ -189,6 +189,7 @@ La gamificación persistente también quedó recertificada: después de publicar
 - [ ] Completar accesibilidad y pruebas con lector de pantalla y texto ampliado.
 - [x] Configurar upload key Android de producción y generar el AAB `1.0.30 (30)` para Google Play.
 - [x] Generar y verificar APK/AAB `1.0.32 (32)` con R8, `mapping.txt`, Web Client ID y upload key de producción.
+- [x] Generar APK/AAB `1.0.34 (34)` y conservarlos en Git: `dist/NOD-1.0.34-android-v34.apk` y `dist/NOD-1.0.34-android-v34.aab`.
 - [ ] Cargar el AAB firmado v32 en la pista interna de Google Play.
 - [ ] Configurar certificados y perfiles de distribución iOS.
 - [ ] Completar revisión jurídica e identidad legal de privacidad, términos y eliminación; las páginas públicas ya responden `200`.
@@ -261,7 +262,7 @@ JAVA_HOME=/ruta/al/jdk-17 \
 
 El `.aab` queda en `android/app/build/outputs/bundle/release/app-release.aab`. Con R8 activado, `mapping.txt` queda en `android/app/build/outputs/mapping/release/mapping.txt` y también se incluye en los metadatos del AAB. La upload key y sus contraseñas deben mantenerse fuera de Git, respaldarse en un gestor seguro y reutilizarse para las próximas versiones.
 
-Los artefactos firmados para publicar están copiados en `dist/NOD-1.0.32-android-v32-play-signed.aab`, `dist/NOD-1.0.32-android-v32-signed.apk` y `dist/NOD-1.0.32-android-v32-signed-mapping.txt`. La verificación confirmó `versionName 1.0.32`, `versionCode 32`, `minSdk 24`, `targetSdk 36` y la SHA-1 esperada por Google Play. El mapping también está dentro de los metadatos del AAB; el archivo separado se conserva para subirlo a Play Console si lo solicita. Google Play App Signing debe estar habilitado para la publicación.
+Los artefactos históricos firmados para publicar están copiados en `dist/NOD-1.0.32-android-v32-play-signed.aab`, `dist/NOD-1.0.32-android-v32-signed.apk` y `dist/NOD-1.0.32-android-v32-signed-mapping.txt`. La versión 1.0.34 quedó generada localmente con debug keystore; antes de publicar en Google Play debe repetirse el build con la upload key de producción.
 
 Build remoto con EAS:
 
@@ -276,8 +277,8 @@ Para publicación se deben configurar `EAS_PROJECT_ID`, Firebase/Google Services
 La configuración iOS actual usa:
 
 - Bundle identifier: `com.nod.mobile`.
-- Versión: `1.0.32`.
-- Build number: `1`.
+- Versión: `1.0.34`.
+- Build number: `2`.
 - Compatibilidad con iPhone y iPad.
 - Permisos declarados para cámara y ubicación.
 
