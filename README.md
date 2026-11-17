@@ -61,9 +61,9 @@ Después del login de cliente se muestra un selector de producto: Mascotas o Hog
 
 Validación de esta integración: TypeScript correcto, **39/39 pruebas**, bundle Android exportado y bundle iOS exportado correctamente.
 
-E2E NOD Home ejecutado el **8 de noviembre de 2026** con `npm run test:e2e:home`: **13/13 checks aprobados**. La prueba creó una cuenta Customer desechable, inició sesión, cargó el catálogo real de 15 servicios, respondió una pregunta dinámica, creó una solicitud, repitió la mutación con la misma `Idempotency-Key`, verificó listado y detalle, y canceló la solicitud. También confirmó que el endpoint Provider Home rechaza correctamente una llamada sin JWT (`401`).
+E2E NOD Home ejecutado el **17 de noviembre de 2026** con `npm run test:e2e:home`: **13/13 checks aprobados**. La prueba creó una cuenta Customer desechable, inició sesión, cargó el catálogo real de 15 servicios, respondió una pregunta dinámica, creó una solicitud, repitió la mutación con la misma `Idempotency-Key`, verificó listado y detalle, y canceló la solicitud. También confirmó que el endpoint Provider Home rechaza correctamente una llamada sin JWT (`401`).
 
-### E2E integral — 9 de noviembre de 2026
+### E2E integral — 17 de noviembre de 2026
 
 La batería E2E repetida con red autorizada quedó así:
 
@@ -74,9 +74,11 @@ La batería E2E repetida con red autorizada quedó así:
 | `e2e-two-customers.mjs` | **38/38** — mascotas, perfiles sociales, Discovery, match/chat, comunidad, alojamiento/chat y reserva normal/chat |
 | `npm run test:e2e:home` | **13/13** — catálogo real de 15 servicios, solicitud, idempotencia, detalle y cancelación |
 | `audit-backend-contracts.mjs` | **74/74** endpoints respondiendo |
-| `npm run test:api` | Smoke ejecutado; respuestas `401/403/404` corresponden a recursos protegidos o IDs ficticios |
+| `npm run test:api` | Smoke ejecutado; respuestas negativas corresponden a recursos protegidos, IDs ficticios o rate limits del smoke |
+| `audit-live-readonly.mjs` | 16 lecturas live; rutas públicas y protegidas responden según contrato |
+| `audit-backend-extra.mjs` | 3 endpoints funcionales; queda un `400 database_error` en actualización de perfil Provider |
 
-Las suites `e2e-authenticated.mjs`, `e2e-customer-community-hosting.mjs` y `e2e-residential-dating.mjs` no arrancaron porque faltan sus variables/IDs E2E específicos en `.env`. La primera ejecución paralela también encontró DNS/rate limit; Home y dos clientes fueron repetidos de forma aislada y aprobaron completamente.
+Las suites `e2e-authenticated.mjs`, `e2e-customer-community-hosting.mjs` y `e2e-residential-dating.mjs` no arrancaron porque faltan sus variables/IDs E2E específicos en `.env`. Home falló inicialmente por DNS del sandbox (`ENOTFOUND`) y fue repetido con red autorizada: **13/13**. `audit-backend-extra.mjs` mantiene un `400 database_error` en actualización de perfil Provider; el resto de respuestas negativas fue por JWT/IDs de prueba inválidos o rate limits esperados.
 
 Smoke visual Android capturado en `NOD_Pixel`:
 
@@ -86,7 +88,7 @@ Smoke visual Android capturado en `NOD_Pixel`:
 
 Estas capturas verifican el arranque nativo y la entrada al módulo cliente. La captura autenticada específica de Home queda pendiente de repetir con una cuenta QA desechable.
 
-La validación local actual ejecuta **39 pruebas** y TypeScript sin errores. La certificación E2E fue repetida el **21 de octubre de 2026** contra los backends desplegados, incluyendo registros Customer y Provider completamente nuevos.
+La validación local actual ejecuta **39 pruebas** y TypeScript sin errores. La certificación E2E fue repetida el **17 de noviembre de 2026** contra los backends desplegados, incluyendo registros Customer, Provider y Home completamente nuevos.
 
 ### Matriz E2E — 21 de octubre de 2026
 
@@ -122,9 +124,9 @@ La auditoría general ejecutada el 23 de octubre obtuvo **74/74 contratos activo
 
 La ejecución verificable de este checkout quedó así: `npm run validate` **39/39**; `e2e-provider-registration.mjs` **10/10**; `e2e-two-customers.mjs` **38/38**; `audit-backend-contracts.mjs` **74/74**; `npm run test:api` respondió correctamente al ejecutarse con red autorizada. `e2e-authenticated.mjs`, `e2e-customer-community-hosting.mjs` y `e2e-residential-dating.mjs` no arrancaron porque faltan sus credenciales/IDs E2E. La auditoría adicional detectó un `400 database_error` en actualización de perfil Provider, que queda pendiente de corregir. La tabla de comandos, IDs QA, artefactos, SHA y estados está en [`docs/PENDIENTES.md`](docs/PENDIENTES.md#evidencia-reproducible).
 
-El estado detallado de las pruebas pendientes del 23 de octubre es: Google Android **parcial** —el APK abre Google Play Services y llega a la pantalla nativa de inicio de sesión, pero el emulador no tiene una cuenta Google; no se pudo completar registro/login ni confirmar la configuración del cliente OAuth Android—; Google iOS **no probado** —falta `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`, firma y dispositivo—; push externo **no probado** —faltan EAS, FCM/APNs y tokens reales—; Mercado Pago **hasta checkout** —se llegó a `unpaid`/`pending` y al formulario de tarjeta sandbox, sin webhook `paid`—; dispositivos físicos **no probados**; iOS nativo **no probado** —solo export JavaScript—; moderación administrativa **no probada con privilegio `admin:moderation`**. El APK v32 sí fue instalado en `NOD_Pixel`, se abrió, se inició sesión con Customer QA y se verificó el dashboard.
+El estado detallado de las pruebas pendientes es: Google Android **parcial** —el APK abre Google Play Services y llega a la pantalla nativa de inicio de sesión, pero el emulador no tiene una cuenta Google; no se pudo completar registro/login ni confirmar la configuración del cliente OAuth Android—; Google iOS **no probado** —falta `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`, firma y dispositivo—; push externo **no probado** —faltan EAS, FCM/APNs y tokens reales—; Mercado Pago **hasta checkout** —se llegó a `unpaid`/`pending` y al formulario de tarjeta sandbox, sin webhook `paid`—; dispositivos físicos **no probados**; iOS nativo **no probado** —solo export JavaScript—; moderación administrativa **no probada con privilegio `admin:moderation`**. El smoke histórico del APK v32 fue instalado en `NOD_Pixel`; el APK/AAB vigente es v34 y queda pendiente repetir el smoke con ese artefacto.
 
-El build publicable v32 usa la upload key `nod-upload`: SHA-1 `C9:37:44:C3:3C:D1:14:CD:A8:EF:B1:D2:8C:9A:7E:29:48:E1:74:38` y SHA-256 `AF:67:D9:4B:0E:29:62:9C:7A:D2:9C:C4:C5:0D:27:F2:AC:13:43:DF:AA:D6:CB:CB:CB:AE:8D:50:08:39:A8:B3`. El rechazo anterior se debió a que el AAB v32 subido estaba firmado con debug (SHA-1 `5E:8F:16:06:2E:A3:CD:2C:4A:0D:54:78:76:BA:A6:F3:8C:AB:F6:25`).
+El build publicable v34 usa la upload key `nod-upload`: SHA-1 `C9:37:44:C3:3C:D1:14:CD:A8:EF:B1:D2:8C:9A:7E:29:48:E1:74:38` y SHA-256 `AF:67:D9:4B:0E:29:62:9C:7A:D2:9C:C4:C5:0D:27:F2:AC:13:43:DF:AA:D6:CB:CB:CB:AE:8D:50:08:39:A8:B3`. El rechazo anterior se debió a que el AAB v32 subido estaba firmado con debug (SHA-1 `5E:8F:16:06:2E:A3:CD:2C:4A:0D:54:78:76:BA:A6:F3:8C:AB:F6:25`).
 
 El smoke Android instaló `NOD-1.0.32-android-v32.apk` en el AVD `NOD_Pixel`, confirmó `versionName 1.0.32`, `versionCode 32`, el arranque de `com.nod.mobile`, onboarding, login Customer QA y dashboard. El flujo manual anterior de reserva en Providencia llegó al checkout Mercado Pago sandbox con `Casa NOD con patio en Providencia` por `$10.000` y formulario de tarjeta, sin confirmar el pago; ese recorrido no se debe interpretar como pago completo ni como certificación física del v32. El Web Client ID está incluido; aún falta certificar OAuth con el cliente Android de producción y un dispositivo físico.
 
@@ -166,7 +168,7 @@ La gamificación persistente también quedó recertificada: después de publicar
 
 ### P1 — Integraciones y pruebas
 
-- [x] Configurar `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` y verificarlo dentro del APK/AAB `1.0.32`.
+- [x] Configurar `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` y verificarlo dentro del APK/AAB `1.0.34`.
 - [ ] Configurar los clientes OAuth Android/iOS definitivos, registrar la SHA de producción y probar Google Login en dispositivos reales.
 - [ ] Vincular el proyecto EAS definitivo y configurar FCM para Android y APNs para iOS.
 - [ ] Probar notificaciones push externas en teléfonos físicos.
@@ -190,7 +192,7 @@ La gamificación persistente también quedó recertificada: después de publicar
 - [x] Configurar upload key Android de producción y generar el AAB `1.0.30 (30)` para Google Play.
 - [x] Generar y verificar APK/AAB `1.0.32 (32)` con R8, `mapping.txt`, Web Client ID y upload key de producción.
 - [x] Generar APK/AAB `1.0.34 (34)` y conservarlos en Git: `dist/NOD-1.0.34-android-v34.apk` y `dist/NOD-1.0.34-android-v34.aab`.
-- [ ] Cargar el AAB firmado v32 en la pista interna de Google Play.
+- [ ] Cargar el AAB firmado v34 en la pista interna de Google Play.
 - [ ] Configurar certificados y perfiles de distribución iOS.
 - [ ] Completar revisión jurídica e identidad legal de privacidad, términos y eliminación; las páginas públicas ya responden `200`.
 - [ ] Preparar capturas, fichas de tienda, Data Safety y Privacy Nutrition Labels.

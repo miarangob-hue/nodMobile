@@ -2,15 +2,15 @@
 
 > **Canal Oficial de Peticiones Backend:** Para solicitar nuevos endpoints, modificaciones de contratos o revisiones arquitectónicas, consulta y añade tu solicitud en [](./CANAL_PETICIONES_BACKEND.md). El equipo de backend procesa y responde las solicitudes directamente en ese archivo.
 
-Última actualización: 8 de noviembre de 2026. Código actual: `1.0.32` (`versionCode 32`).
+Última actualización: 17 de noviembre de 2026. Código actual: `1.0.34` (`versionCode 34`).
 
 ## Resumen ejecutivo
 
-La funcionalidad principal está operativa: registro y login, mascotas, comunidad, match y chat, reservas normales, Housing y chat de reservas aprobaron las pruebas automatizadas y E2E disponibles. El 23 de octubre pasaron validación local **39/39**, registro Provider **10/10**, E2E de dos clientes **38/38** y contratos **74/74**. La regresión autenticada histórica **15/15** no pudo repetirse porque faltan credenciales E2E; tampoco arrancaron los E2E residenciales/dating específicos por falta de configuración. El 27 de octubre Android `1.0.32` se recompiló con la upload key correcta de producción, R8, `mapping.txt` y el Web Client ID de Google embebido en APK/AAB. El flujo visual Customer llegó al checkout Mercado Pago sandbox sin confirmar pago. El trabajo pendiente se concentra en publicación, integraciones externas, un `400 database_error` de perfil Provider y validación en dispositivos reales.
+La funcionalidad principal está operativa: registro y login, mascotas, comunidad, match y chat, reservas normales, Housing, Home y chat de reservas aprobaron las pruebas automatizadas y E2E disponibles. El 17 de noviembre pasaron validación local **39/39**, registro Provider **10/10**, E2E de dos clientes **38/38**, E2E Home **13/13** y contratos **74/74**. La regresión autenticada avanzada y los E2E residenciales/dating específicos siguen bloqueados por configuración ausente. Android `1.0.34` está recompilado con upload key de producción, R8, `mapping.txt`, orientación vertical opcional y Web Client ID de Google. El trabajo pendiente se concentra en publicación, integraciones externas, un `400 database_error` de perfil Provider, credenciales E2E adicionales y validación en dispositivos reales.
 
 Orden recomendado:
 
-1. **P0 — Antes de entregar una nueva versión:** proteger credenciales, generar Android `1.0.32 (32)` y completar la configuración mínima de Google Play.
+1. **P0 — Antes de entregar una nueva versión:** proteger credenciales, cargar Android `1.0.34 (34)` y completar la configuración mínima de Google Play.
 2. **P1 — Antes de abrir la app al público:** terminar pagos, Google OAuth, push, documentos legales y pruebas físicas Android.
 3. **P1 iOS — Antes de publicar en App Store:** certificados, IPA, OAuth/APNs y pruebas físicas iPhone.
 4. **P2 — Después de estabilizar el lanzamiento:** accesibilidad avanzada, moderación, disponibilidad horaria y pruebas destructivas controladas.
@@ -53,7 +53,7 @@ src/screens/HomeServicesScreen.tsx
 src/screens/ProviderHomeScreen.tsx
 ```
 
-### E2E Home — 8 de noviembre de 2026
+### E2E Home — 17 de noviembre de 2026
 
 Comando reproducible: `npm run test:e2e:home`.
 
@@ -70,6 +70,21 @@ Resultado: **13/13 checks aprobados** contra el backend desplegado usando una cu
 
 Durante la certificación se corrigieron dos diferencias entre el contrato escrito y el backend desplegado: la solicitud requiere `address` y `commune` como campos de primer nivel, y las respuestas de preguntas usan la `key` corta de la pregunta con opciones `{ label, value }`. Mobile quedó alineado con el comportamiento real desplegado.
 
+### E2E integral — 17 de noviembre de 2026
+
+| Suite | Resultado | Observación |
+|---|---:|---|
+| `npm run validate` | **39/39** | TypeScript y Vitest correctos |
+| `e2e-provider-registration.mjs` | **10/10** | Registro y persistencia de onboarding Provider |
+| `e2e-two-customers.mjs` | **38/38** | Pets, Discovery, match/chat, comunidad, Housing/chat y reserva normal/chat; reservas canceladas |
+| `npm run test:e2e:home` | **13/13** | Catálogo real de 15 servicios, idempotencia, solicitud, detalle y cancelación |
+| `audit-backend-contracts.mjs` | **74/74** | Todos los contratos respondieron |
+| `audit-live-readonly.mjs` | Ejecutado | Rutas públicas respondieron; rutas protegidas devolvieron `401` sin JWT |
+| `audit-backend-extra.mjs` | Ejecutado | Pricing y planes OK; actualización de perfil Provider sigue en `400 database_error` |
+| `npm run test:api` | Ejecutado | Errores corresponden a IDs ficticios, falta de JWT, permisos admin o rate limit |
+
+No arrancaron `e2e-authenticated.mjs`, `e2e-customer-community-hosting.mjs` ni `e2e-residential-dating.mjs`: faltan respectivamente credenciales Customer/Provider, cuentas y `NOD_E2E_HOSTING_PROFILE_ID`, y configuración Supabase/fixture de dating. No se consideran fallos de los flujos que sí fueron ejecutados.
+
 ## P0 — Bloqueantes de la próxima entrega Android
 
 ### 1. Proteger y rotar credenciales
@@ -80,13 +95,13 @@ Durante la certificación se corrigieron dos diferencias entre el contrato escri
 
 **Terminado cuando:** las claves productivas se carguen desde el mecanismo seguro del build, las anteriores estén revocadas y ningún secreto aparezca en Git o documentación pública.
 
-### 2. Subir y probar Android `1.0.32 (32)`
+### 2. Subir y probar Android `1.0.34 (34)`
 
-**Estado actual:** el APK y AAB `1.0.32 (32)` fueron recompilados el 27-10 con la upload key `nod-upload` y verificados con R8. `mapping.txt` coincide con el mapa incluido en el AAB. Los artefactos firmados están en `dist/`: `NOD-1.0.32-android-v32-play-signed.aab`, `NOD-1.0.32-android-v32-signed.apk` y `NOD-1.0.32-android-v32-signed-mapping.txt`. El APK declara `minSdk 24` y `targetSdk 36`. SHA-1 verificada: `C9:37:44:C3:3C:D1:14:CD:A8:EF:B1:D2:8C:9A:7E:29:48:E1:74:38`; SHA-256: `AF:67:D9:4B:0E:29:62:9C:7A:D2:9C:C4:C5:0D:27:F2:AC:13:43:DF:AA:D6:CB:CB:CB:AE:8D:50:08:39:A8:B3`. El AAB contiene `BUNDLE-METADATA/com.android.tools.build.obfuscation/proguard.map`.
+**Estado actual:** el APK y AAB `1.0.34 (34)` están recompilados con la upload key `nod-upload`, R8, `mapping.txt` y la orientación vertical declarada como función opcional. Los artefactos están en `dist/`: `NOD-1.0.34-android-v34.aab` y `NOD-1.0.34-android-v34.apk`. SHA-1 verificada: `C9:37:44:C3:3C:D1:14:CD:A8:EF:B1:D2:8C:9A:7E:29:48:E1:74:38`; el AAB contiene `BUNDLE-METADATA/com.android.tools.build.obfuscation/proguard.map`.
 
-**Qué falta:** cargar `dist/NOD-1.0.32-android-v32-play-signed.aab` en la pista interna de Google Play y repetir la certificación en un dispositivo físico.
+**Qué falta:** cargar `dist/NOD-1.0.34-android-v34.aab` en la pista interna de Google Play y repetir la certificación en un dispositivo físico.
 
-**Terminado cuando:** el APK v32 se instale y abra correctamente y el AAB v32 quede aceptado en una pista interna de Google Play.
+**Terminado cuando:** el APK v34 se instale y abra correctamente y el AAB v34 quede aceptado en una pista interna de Google Play.
 
 ### 3. Completar la ficha técnica mínima de Google Play
 
@@ -110,7 +125,7 @@ La auditoría adicional también detectó un `400 database_error` en actualizaci
 
 ### 5. Configurar Google Login real
 
-**Estado actual:** el botón y el flujo móvil existen. `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` ya está configurado localmente y verificado dentro del APK/AAB `1.0.32`.
+**Estado actual:** el botón y el flujo móvil existen. `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` ya está configurado localmente y verificado dentro del APK/AAB `1.0.34`.
 
 **Qué falta:** configurar los clientes Android e iOS definitivos, registrar SHA-1/SHA-256 de la firma de producción y validar login y registro en builds firmados; el backend debe aceptar el mismo Client ID como audiencia (`aud`).
 
@@ -183,32 +198,34 @@ No debe confundirse esta sección con trabajo pendiente:
 
 ## Evidencia reproducible
 
-### Ejecución integral del 9 de noviembre de 2026
+### Ejecución integral del 17 de noviembre de 2026
 
 - `npm run validate`: **39/39**.
 - `node --env-file=.env scripts/e2e-provider-registration.mjs`: **10/10**.
 - `node --env-file=.env scripts/e2e-two-customers.mjs`: **38/38**.
 - `npm run test:e2e:home`: **13/13**.
 - `node --env-file=.env scripts/audit-backend-contracts.mjs`: **74/74** endpoints respondiendo.
+- `node --env-file=.env scripts/audit-live-readonly.mjs`: ejecutado; rutas públicas responden y rutas protegidas exigen JWT.
+- `node --env-file=.env scripts/audit-backend-extra.mjs`: pricing y planes responden; actualización de perfil Provider continúa en `400 database_error`.
 - `npm run test:api`: ejecutado; los errores observados corresponden principalmente a JWT ausente, IDs ficticios o límites de rate limit del smoke.
 - Suites bloqueadas por configuración ausente: `e2e-authenticated.mjs`, `e2e-customer-community-hosting.mjs` y `e2e-residential-dating.mjs`.
 
 | Área | Evidencia concreta | Resultado |
 |---|---|---|
-| Validación local | `npm run validate` ejecutado el 23-10 | TypeScript correcto; Vitest **39/39** |
+| Validación local | `npm run validate` ejecutado el 17-11 | TypeScript correcto; Vitest **39/39** |
 | Registro Provider | `node --env-file=.env scripts/e2e-provider-registration.mjs` | **10/10**; cuenta QA creada y onboarding persistido |
 | E2E dos clientes | `node --env-file=.env scripts/e2e-two-customers.mjs` | **38/38**; match `204ab2c8-399e-4339-9456-b6bb4f1d14de`, Housing `4fc53b18-6a14-4cdd-aa4f-931d2994f019`, servicio `e96fba32-d83a-4f7e-970c-93296dc120b9` |
 | Contratos | `node --env-file=.env scripts/audit-backend-contracts.mjs` | **74/74** endpoints respondiendo |
 | E2E NOD Home Customer | `npm run test:e2e:home` | **13/13**; catálogo real de 15 servicios, solicitud, idempotencia, listado, detalle y cancelación |
 | Smoke API | `npm run test:api` con red autorizada | Endpoints válidos respondieron; respuestas `401/403/404` corresponden a sesiones o IDs inválidos de prueba |
-| APK Android firmado | `dist/NOD-1.0.32-android-v32-signed.apk`, `apksigner verify --print-certs` | `com.nod.mobile`, `versionCode 32`, `versionName 1.0.32`, `minSdk 24`, `targetSdk 36`; SHA-1 de producción verificada |
-| AAB firmado y mapping | `dist/NOD-1.0.32-android-v32-play-signed.aab` y `dist/NOD-1.0.32-android-v32-signed-mapping.txt` | Build R8 firmado; el AAB incluye `proguard.map` en `BUNDLE-METADATA` |
+| APK Android firmado | `dist/NOD-1.0.34-android-v34.apk`, `apksigner verify --print-certs` | `com.nod.mobile`, `versionCode 34`, `versionName 1.0.34`, `minSdk 24`, `targetSdk 36`; SHA-1 de producción verificada |
+| AAB firmado y mapping | `dist/NOD-1.0.34-android-v34.aab` y `android/app/build/outputs/mapping/release/mapping.txt` | Build R8 firmado; el AAB incluye `proguard.map` en `BUNDLE-METADATA` |
 | Android smoke | Instalación con `adb install -r`, apertura de `MainActivity` en `NOD_Pixel` | APK instalado; onboarding, login Customer QA y dashboard visibles |
-| Google Android | Botón Google del APK v32 | Google Play Services abrió `Sign in`; no se completó porque el emulador no tenía cuenta Google |
-| SHA del APK firmado | `apksigner verify --print-certs dist/NOD-1.0.32-android-v32-signed.apk` | SHA-1 `C9:37:44:C3:3C:D1:14:CD:A8:EF:B1:D2:8C:9A:7E:29:48:E1:74:38`; SHA-256 `AF:67:D9:4B:0E:29:62:9C:7A:D2:9C:C4:C5:0D:27:F2:AC:13:43:DF:AA:D6:CB:CB:CB:AE:8D:50:08:39:A8:B3` |
+| Google Android | Botón Google del APK v32 (evidencia histórica) | Google Play Services abrió `Sign in`; no se completó porque el emulador no tenía cuenta Google |
+| SHA del APK firmado | `apksigner verify --print-certs dist/NOD-1.0.34-android-v34.apk` | SHA-1 `C9:37:44:C3:3C:D1:14:CD:A8:EF:B1:D2:8C:9A:7E:29:48:E1:74:38`; SHA-256 `AF:67:D9:4B:0E:29:62:9C:7A:D2:9C:C4:C5:0D:27:F2:AC:13:43:DF:AA:D6:CB:CB:CB:AE:8D:50:08:39:A8:B3` |
 | Mercado Pago | Reserva QA `1bb95a03-c828-4de8-830d-d0341bea14c0`; checkout sandbox `x.mercadopago.cl` | `unpaid`/`pending`; formulario de tarjeta visible; sin cobro ni webhook `paid` |
 
-La evidencia de build y mapping queda en `dist/` local; el APK/AAB están ignorados por Git y el mapping está permitido/versionado. La evidencia de ejecución E2E queda además resumida en los JSON de salida de cada script durante la ejecución; las cuentas y tokens QA no se documentan para no exponer credenciales.
+La evidencia de build y mapping queda en `dist/`; el APK y AAB `1.0.34` están versionados en Git. La evidencia de ejecución E2E queda además resumida en los JSON de salida de cada script durante la ejecución; las cuentas y tokens QA no se documentan para no exponer credenciales.
 
 - **Customer E2E del 23-10: 38/38.** Dos cuentas nuevas completaron registro, login, mascotas, perfiles sociales, Discovery, match/chat, comunidad, Housing/chat y reserva normal/chat. Las reservas de prueba fueron canceladas.
 - **Provider nuevo del 23-10: 10/10.** Registro, login, 13 pasos activos, progreso, rechazos, guardado de categoría/paseador y persistencia.
@@ -223,10 +240,10 @@ La evidencia de build y mapping queda en `dist/` local; el APK/AAB están ignora
 - **Ciclo Provider:** aceptar, iniciar, registrar GPS, pausar, reanudar, completar y consultar detalle, timeline, ETA, ruta y fotos.
 - **Comunidad:** publicaciones, likes, comentarios, estadísticas, diez medallas y rankings global, mensual, semanal y por comuna.
 - **Seguridad funcional:** servicio inexistente `404`, fuera de cobertura `422`, fecha pasada `400`, conflicto horario `409` y cancelación ajena `403`.
-- **Android v32:** APK recompilado, instalado y ejecutado en el emulador `NOD_Pixel`; se verificaron onboarding, login Customer QA y dashboard. El checkout Mercado Pago se había alcanzado en un recorrido manual anterior, pero no se repitió completo con este APK v32 y no reemplaza las pruebas en dispositivo físico.
+- **Android v32 histórico:** APK recompilado, instalado y ejecutado en el emulador `NOD_Pixel`; se verificaron onboarding, login Customer QA y dashboard. El smoke del artefacto vigente v34 aún debe repetirse.
 - **Cobertura normal:** se corrigió el falso rechazo local causado por `provider.zones` conteniendo una dirección en lugar de una comuna; Mobile delega ahora la validación al endpoint de creación.
 - **Pendiente técnico:** `audit-backend-extra.mjs` devolvió `400 database_error` al actualizar un perfil Provider; el resto de respuestas negativas del barrido correspondió a falta de JWT o IDs de prueba inválidos.
-- **Pendientes no ejecutados:** `e2e-authenticated.mjs` requiere `NOD_E2E_CUSTOMER_EMAIL`, `NOD_E2E_PROVIDER_EMAIL` y `NOD_E2E_PASSWORD`; `e2e-customer-community-hosting.mjs` requiere cuentas y `NOD_E2E_HOSTING_PROFILE_ID`; `e2e-residential-dating.mjs` requiere `NOD_E2E_PROVIDER_PROJECT_URL`, `NOD_E2E_PROVIDER_ANON_KEY` y `NOD_E2E_TEST_EMAIL_BASE`.
+- **Pendientes no ejecutados:** `e2e-authenticated.mjs` requiere `NOD_E2E_CUSTOMER_EMAIL`, `NOD_E2E_PROVIDER_EMAIL` y `NOD_E2E_PASSWORD`; `e2e-customer-community-hosting.mjs` requiere cuentas y `NOD_E2E_HOSTING_PROFILE_ID`; `e2e-residential-dating.mjs` requiere `NOD_E2E_PROVIDER_PROJECT_URL`, `NOD_E2E_PROVIDER_ANON_KEY` y `NOD_E2E_TEST_EMAIL_BASE`. En esta ejecución las tres suites terminaron antes de iniciar por configuración ausente.
 - **Google Android:** prueba parcial; falta una cuenta Google QA en el emulador y la configuración/verificación de la huella de producción.
 - **Google iOS:** no probado; falta `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`, certificados, provisioning profile y dispositivo.
 - **Push externo:** no probado; faltan proyecto EAS, FCM, APNs, worker y tokens reales.
@@ -242,7 +259,7 @@ La evidencia de build y mapping queda en `dist/` local; el APK/AAB están ignora
 
 1. Rotar/configurar secretos productivos.
 2. Configurar las cuentas/IDs E2E faltantes y repetir las tres suites bloqueadas.
-3. Subir el AAB v32 a prueba interna de Google Play.
+3. Subir el AAB v34 a prueba interna de Google Play.
 4. Completar Google OAuth Android con cuenta QA, SHA de producción y cliente OAuth Android.
 5. Ejecutar la matriz física Android.
 6. Completar pago sandbox, webhook y Créditos NOD.
