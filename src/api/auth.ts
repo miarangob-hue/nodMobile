@@ -1,4 +1,5 @@
 import { apiRequest } from "./client";
+import { env } from "../config/env";
 import type {
   Customer,
   LoginResponse,
@@ -22,6 +23,30 @@ export function loginWithGoogleToken(idToken: string, role: "customer" | "provid
     method: "POST",
     body: { id_token: idToken },
     apiKeyKind: role
+  });
+}
+
+export type AbaiCodeRequestResponse = {
+  challenge_id?: string;
+  expires_in?: number;
+  masked_destination?: string;
+  channel?: "sms" | "whatsapp";
+  message?: string;
+};
+
+export function requestAbaiLoginCode(phone: string) {
+  return apiRequest<AbaiCodeRequestResponse>(env.abaiAuthRequestPath, {
+    method: "POST",
+    body: { phone, channel: "whatsapp" },
+    apiKeyKind: "customer"
+  });
+}
+
+export function verifyAbaiLoginCode(phone: string, code: string, challengeId?: string) {
+  return apiRequest<LoginResponse>(env.abaiAuthVerifyPath, {
+    method: "POST",
+    body: { phone, code, challenge_id: challengeId },
+    apiKeyKind: "customer"
   });
 }
 

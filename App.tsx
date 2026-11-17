@@ -7,7 +7,6 @@ import { refreshLogin } from "./src/api/auth";
 import { getProviderOnboarding } from "./src/api/onboarding";
 import { CustomerAppScreen } from "./src/screens/CustomerAppScreen";
 import { CompleteCustomerProfileScreen } from "./src/screens/CompleteCustomerProfileScreen";
-import { CustomerServiceSelectionScreen } from "./src/screens/CustomerServiceSelectionScreen";
 import { LoginScreen } from "./src/screens/LoginScreen";
 import { OnboardingScreen } from "./src/screens/OnboardingScreen";
 import { ProviderDashboardScreen } from "./src/screens/ProviderDashboardScreen";
@@ -25,7 +24,7 @@ import {
   type PushNotificationData
 } from "./src/services/pushNotifications";
 
-type Route = "loading" | "welcome" | "roleSelection" | "login" | "register" | "registerCustomer" | "completeCustomerProfile" | "customerService" | "customer" | "onboarding" | "verification" | "approved";
+type Route = "loading" | "welcome" | "roleSelection" | "login" | "register" | "registerCustomer" | "completeCustomerProfile" | "customer" | "onboarding" | "verification" | "approved";
 
 export default function App() {
   const [route, setRoute] = useState<Route>("loading");
@@ -120,11 +119,6 @@ export default function App() {
       setSession(nextSession);
       await saveSession(nextSession);
     }
-    setRoute("customerService");
-  }
-
-  function handleCustomerServiceSelected(service: CustomerService) {
-    setCustomerService(service);
     setRoute("customer");
   }
 
@@ -250,17 +244,12 @@ export default function App() {
           customer={customer}
           initialService={customerService}
           onLogout={handleLogout}
-          onChangeService={() => setRoute("customerService")}
+          onChangeService={(service) => {
+            setCustomerService(service);
+            setRoute("customer");
+          }}
           pushIntent={pushIntent}
           onPushIntentHandled={() => setPushIntent(null)}
-        />
-      ) : null}
-
-      {route === "customerService" && customer ? (
-        <CustomerServiceSelectionScreen
-          customerName={customer.first_name ?? customer.email}
-          onLogout={handleLogout}
-          onSelect={handleCustomerServiceSelected}
         />
       ) : null}
 
@@ -282,7 +271,7 @@ function getSessionRoute(session: Session | null): Route {
 
   if (session.customer || session.roles?.some((role) => ["customer", "client"].includes(role))) {
     const customer = getCustomerFromSession(session);
-    return session.is_new_user || !customer?.phone || !customer?.rut ? "completeCustomerProfile" : "customerService";
+    return session.is_new_user || !customer?.phone || !customer?.rut ? "completeCustomerProfile" : "customer";
   }
 
   return getProviderRoute(getProviderFromSession(session));

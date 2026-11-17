@@ -169,7 +169,7 @@ type Props = {
   customer: Customer;
   initialService?: CustomerService;
   onLogout: () => void;
-  onChangeService: () => void;
+  onChangeService: (service: CustomerService) => void;
   pushIntent?: { id: number; data: PushNotificationData } | null;
   onPushIntentHandled?: () => void;
 };
@@ -179,7 +179,9 @@ type PendingCheckout =
   | { kind: "topup"; previousCredits: number };
 
 export function CustomerAppScreen({ accessToken, customer, initialService = "pet", onLogout, onChangeService, pushIntent, onPushIntentHandled }: Props) {
+  const [activeService, setActiveService] = useState<CustomerService>(initialService);
   const [activeView, setActiveView] = useState<CustomerView>(getInitialCustomerView(initialService));
+  const [homeTab, setHomeTab] = useState<"home" | "services" | "requests">("home");
   const [profile, setProfile] = useState<Customer>(customer);
   const [pets, setPets] = useState<Pet[]>([]);
   const [bookings, setBookings] = useState<CustomerBooking[]>([]);
@@ -198,6 +200,12 @@ export function CustomerAppScreen({ accessToken, customer, initialService = "pet
   const [spotUnlocks, setSpotUnlocks] = useState<CustomerSpotUnlock[]>([]);
   const [petMedicalProfiles, setPetMedicalProfiles] = useState<PetMedicalProfile[]>([]);
   const [selectedPet, setSelectedPet] = useState<Pet | null>(null);
+
+  useEffect(() => {
+    setActiveService(initialService);
+    setActiveView(getInitialCustomerView(initialService));
+    setHomeTab("home");
+  }, [initialService]);
 
   useEffect(() => {
     void registerPushNotifications({ userId: customer.id, role: "customer", accessToken }).catch(() => null);
@@ -429,7 +437,7 @@ export function CustomerAppScreen({ accessToken, customer, initialService = "pet
     }
 
     if (activeView === "home_services") {
-      return <HomeServicesScreen accessToken={accessToken} customer={profile} onExit={() => setActiveView("home")} />;
+      return <HomeServicesScreen accessToken={accessToken} customer={profile} initialTab={homeTab} onExit={() => setActiveView("home")} />;
     }
 
     if (activeView === "booking" && selectedProvider) {
@@ -586,14 +594,30 @@ export function CustomerAppScreen({ accessToken, customer, initialService = "pet
     );
   }
 
+  const bottomItems: Array<[CustomerView, keyof typeof Feather.glyphMap, string, string]> = activeService === "home" ? [
+    ["home_services", "home", "Inicio", "home"],
+    ["home_services", "tool", "Servicios", "services"],
+    ["home_services", "clipboard", "Solicitudes", "requests"],
+    ["profile", "user", "Perfil", "profile"]
+  ] : [
+    ["home", "home", "Inicio", "home"],
+    ["pets", "heart", "Mascotas", "pets"],
+    ["explore", "search", "Servicios", "explore"],
+    ["dog_match", "heart", "Matches", "dog_match"],
+    ["activity", "calendar", "Reservas", "activity"],
+    ["profile", "user", "Perfil", "profile"]
+  ];
+
   return (
     <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.screen}>
       <ScrollView
         contentContainerStyle={styles.container}
         keyboardDismissMode="none"
         keyboardShouldPersistTaps="handled"
+        stickyHeaderIndices={[0]}
         refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={() => void Promise.all([loadHome(), loadNodWallet()])} />}
       >
+        <View style={styles.stickyProductHeader}>
         <View style={styles.topBar}>
           <View style={styles.brandBlock}>
             <BrandLogo size="small" />
@@ -603,13 +627,25 @@ export function CustomerAppScreen({ accessToken, customer, initialService = "pet
             <Feather color="#626D84" name="bell" size={18} />
             {notifications.some((item) => !item.read_at) ? <View style={styles.topBarNotificationDot} /> : null}
           </Pressable>
-          <Pressable accessibilityLabel="Cambiar servicio" onPress={onChangeService} style={styles.serviceSwitcher}>
-            <Feather color="#EE7C2B" name={initialService === "home" ? "home" : "heart"} size={15} />
-            <Text style={styles.serviceSwitcherText}>{getCustomerServiceLabel(initialService)}</Text>
-          </Pressable>
           <Pressable onPress={onLogout} style={styles.iconButton}>
             <Feather color="#626D84" name="log-out" size={18} />
           </Pressable>
+        </View>
+
+        <View style={styles.productNav}>
+          {([ ["pet", "heart", "Mascotas"], ["home", "home", "Hogar"] ] as Array<[CustomerService, keyof typeof Feather.glyphMap, string]>).map(([service, icon, label]) => {
+            const selected = activeService === service;
+            return <Pressable key={service} accessibilityLabel={`Cambiar a ${label}`} onPress={() => {
+              setActiveService(service);
+              setActiveView(getInitialCustomerView(service));
+              setHomeTab("home");
+              onChangeService(service);
+            }} style={[styles.productNavItem, selected && styles.productNavItemSelected]}>
+              <Feather color={selected ? "#EE7C2B" : "#8992A3"} name={icon} size={16} />
+              <Text style={[styles.productNavText, selected && styles.productNavTextSelected]}>{label}</Text>
+            </Pressable>;
+          })}
+        </View>
         </View>
 
         {activeView !== "home" ? (
@@ -631,17 +667,10 @@ export function CustomerAppScreen({ accessToken, customer, initialService = "pet
         {renderContent()}
       </ScrollView>
       <View style={styles.bottomNav}>
-        {([
-          ["home", "home", "Inicio"],
-          ["home_services", "home", "Hogar"],
-          ["explore", "search", "Servicios"],
-          ["dog_match", "heart", "Matches"],
-          ["activity", "calendar", "Reservas"],
-          ["profile", "user", "Perfil"]
-        ] as Array<[CustomerView, keyof typeof Feather.glyphMap, string]>).map(([view, icon, label]) => {
-          const selected = activeView === view;
+        {bottomItems.map(([view, icon, label, tab]) => {
+          const selected = activeView === view && (activeService === "pet" || homeTab === tab);
           return (
-            <Pressable key={view} onPress={() => { setSelectedBooking(null); setSelectedProvider(null); setSelectedPet(null); setActiveView(view); }} style={styles.bottomNavItem}>
+            <Pressable key={`${view}-${tab}`} onPress={() => { setSelectedBooking(null); setSelectedProvider(null); setSelectedPet(null); if (activeService === "home") setHomeTab(tab as "home" | "services" | "requests"); setActiveView(view); }} style={styles.bottomNavItem}>
               <Feather color={selected ? "#EE7C2B" : "#626D84"} name={icon} size={20} />
               <Text style={[styles.bottomNavText, selected && styles.bottomNavTextSelected]}>{label}</Text>
             </Pressable>
@@ -3583,6 +3612,27 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginBottom: 18
   },
+  productNav: {
+    backgroundColor: "#F3F0EB",
+    borderRadius: 14,
+    flexDirection: "row",
+    gap: 6,
+    marginBottom: 18,
+    padding: 4
+  },
+  stickyProductHeader: { backgroundColor: "#FCFAF7", zIndex: 2 },
+  productNavItem: {
+    alignItems: "center",
+    borderRadius: 11,
+    flex: 1,
+    flexDirection: "row",
+    gap: 6,
+    justifyContent: "center",
+    paddingVertical: 10
+  },
+  productNavItemSelected: { backgroundColor: "#FFFFFF" },
+  productNavText: { color: "#8992A3", fontSize: 12, fontWeight: "800" },
+  productNavTextSelected: { color: "#EE7C2B" },
   brandBlock: {
     alignItems: "flex-start",
     flex: 1,

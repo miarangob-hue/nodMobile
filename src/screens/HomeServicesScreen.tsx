@@ -25,6 +25,7 @@ import {
 type Props = {
   accessToken?: string | null;
   customer: { address?: string | null; comuna?: string | null; city?: string | null };
+  initialTab?: "home" | "services" | "requests";
   onExit: () => void;
 };
 
@@ -48,8 +49,9 @@ const serviceIcons: Record<string, keyof typeof Feather.glyphMap> = {
   home_installations: "tool"
 };
 
-export function HomeServicesScreen({ accessToken, customer, onExit }: Props) {
+export function HomeServicesScreen({ accessToken, customer, initialTab = "home", onExit }: Props) {
   const [mode, setMode] = useState<Mode>("home");
+  const [homeTab, setHomeTab] = useState<"home" | "services" | "requests">(initialTab);
   const [services, setServices] = useState<HomeService[]>([]);
   const [requests, setRequests] = useState<HomeServiceRequest[]>([]);
   const [quotes, setQuotes] = useState<HomeQuote[]>([]);
@@ -66,6 +68,8 @@ export function HomeServicesScreen({ accessToken, customer, onExit }: Props) {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => { setHomeTab(initialTab); }, [initialTab]);
 
   async function loadHome() {
     setError(null);
@@ -261,12 +265,10 @@ export function HomeServicesScreen({ accessToken, customer, onExit }: Props) {
   }
 
   return <View>
-    <View style={styles.hero}><View style={styles.heroHeader}><View><Text style={styles.kicker}>NOD HOME</Text><Text style={styles.heroTitle}>Tu hogar, en buenas manos.</Text><Text style={styles.heroText}>Encuentra profesionales confiables para resolver lo que tu casa necesita.</Text></View><View style={styles.heroOrb}><Feather color="#254D3C" name="home" size={27} /></View></View><Pressable onPress={() => setMode("wizard")} style={styles.heroButton}><Text style={styles.heroButtonText}>¿Qué necesitas hoy?</Text><Feather color="#254D3C" name="arrow-right" size={17} /></Pressable></View>
+    {homeTab === "home" ? <View style={styles.hero}><View style={styles.heroHeader}><View><Text style={styles.kicker}>NOD HOME</Text><Text style={styles.heroTitle}>Tu hogar, en buenas manos.</Text><Text style={styles.heroText}>Encuentra profesionales confiables para resolver lo que tu casa necesita.</Text></View><View style={styles.heroOrb}><Feather color="#254D3C" name="home" size={27} /></View></View><Pressable onPress={() => { setHomeTab("services"); setMode("wizard"); }} style={styles.heroButton}><Text style={styles.heroButtonText}>¿Qué necesitas hoy?</Text><Feather color="#254D3C" name="arrow-right" size={17} /></Pressable></View> : null}
     {error ? <Text style={styles.error}>{error}</Text> : null}
-    <View style={styles.rowBetween}><Text style={styles.sectionTitle}>Servicios del hogar</Text><Text style={styles.count}>{services.length}</Text></View>
-    <View style={styles.grid}>{services.slice(0, 12).map((service) => <Pressable key={service.id} onPress={() => openService(service)} style={styles.serviceCard}><View style={styles.serviceIcon}><Feather color="#254D3C" name={serviceIcons[service.id] ?? "home"} size={19} /></View><Text style={styles.serviceName}>{service.name}</Text></Pressable>)}</View>
-    <View style={styles.rowBetween}><Text style={styles.sectionTitle}>Mis solicitudes</Text><Pressable onPress={loadHome}><Text style={styles.link}>Actualizar</Text></Pressable></View>
-    {requests.length ? requests.map((request) => <Pressable key={request.id} onPress={() => void openRequest(request)} style={styles.requestCard}><View style={styles.rowBetween}><View style={{ flex: 1 }}><Text style={styles.title}>{request.title}</Text><Text style={styles.muted}>{request.commune ?? "Santiago"} · {request.created_at.slice(0, 10)}</Text></View><Status status={request.status} /></View><View style={styles.divider} /><Text style={styles.link}>{request.quotes_count ?? 0} cotizaciones  ·  Ver detalle ›</Text></Pressable>) : <View style={styles.empty}><Feather color="#C9D8C2" name="clipboard" size={32} /><Text style={styles.title}>Todavía no tienes solicitudes</Text><Text style={styles.muted}>Elige un servicio para comenzar.</Text></View>}
+    {homeTab !== "requests" ? <><View style={styles.rowBetween}><Text style={styles.sectionTitle}>Servicios del hogar</Text><Text style={styles.count}>{services.length}</Text></View><View style={styles.grid}>{services.slice(0, 12).map((service) => <Pressable key={service.id} onPress={() => openService(service)} style={styles.serviceCard}><View style={styles.serviceIcon}><Feather color="#254D3C" name={serviceIcons[service.id] ?? "home"} size={19} /></View><Text style={styles.serviceName}>{service.name}</Text></Pressable>)}</View></> : null}
+    {homeTab !== "services" ? <><View style={styles.rowBetween}><Text style={styles.sectionTitle}>Mis solicitudes</Text><Pressable onPress={loadHome}><Text style={styles.link}>Actualizar</Text></Pressable></View>{requests.length ? requests.map((request) => <Pressable key={request.id} onPress={() => void openRequest(request)} style={styles.requestCard}><View style={styles.rowBetween}><View style={{ flex: 1 }}><Text style={styles.title}>{request.title}</Text><Text style={styles.muted}>{request.commune ?? "Santiago"} · {request.created_at.slice(0, 10)}</Text></View><Status status={request.status} /></View><View style={styles.divider} /><Text style={styles.link}>{request.quotes_count ?? 0} cotizaciones  ·  Ver detalle ›</Text></Pressable>) : <View style={styles.empty}><Feather color="#C9D8C2" name="clipboard" size={32} /><Text style={styles.title}>Todavía no tienes solicitudes</Text><Text style={styles.muted}>Elige un servicio para comenzar.</Text></View>}</> : null}
   </View>;
 }
 

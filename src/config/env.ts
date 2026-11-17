@@ -18,11 +18,14 @@ export const env = {
     "",
   customerApiBaseUrl: process.env.EXPO_PUBLIC_NOD_CUSTOMER_API_BASE_URL ?? defaultCustomerBaseUrl,
   homeApiBaseUrl: process.env.EXPO_PUBLIC_NOD_HOME_API_BASE_URL ?? defaultHomeBaseUrl,
+  abaiAuthRequestPath: process.env.EXPO_PUBLIC_NOD_ABAI_AUTH_REQUEST_PATH ?? "/auth/abai/request-code",
+  abaiAuthVerifyPath: process.env.EXPO_PUBLIC_NOD_ABAI_AUTH_VERIFY_PATH ?? "/auth/abai/verify-code",
   adminApiBaseUrl: process.env.EXPO_PUBLIC_NOD_ADMIN_API_BASE_URL ?? defaultCatalogBaseUrl,
   adminApiKey: process.env.EXPO_PUBLIC_NOD_ADMIN_API_KEY ?? ""
 };
 
-export function assertRuntimeConfig(role: "provider" | "customer" = "provider") {
+export function assertRuntimeConfig(role: "provider" | "customer" | "abai" = "provider") {
+  if (role === "abai") role = "customer";
   if (role === "customer" && !env.customerApiKey) {
     throw new Error("Missing EXPO_PUBLIC_NOD_CUSTOMER_API_KEY. Copy .env.example to .env and set the customer API key.");
   }

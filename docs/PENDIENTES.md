@@ -183,6 +183,16 @@ No debe confundirse esta sección con trabajo pendiente:
 
 ## Evidencia reproducible
 
+### Ejecución integral del 9 de noviembre de 2026
+
+- `npm run validate`: **39/39**.
+- `node --env-file=.env scripts/e2e-provider-registration.mjs`: **10/10**.
+- `node --env-file=.env scripts/e2e-two-customers.mjs`: **38/38**.
+- `npm run test:e2e:home`: **13/13**.
+- `node --env-file=.env scripts/audit-backend-contracts.mjs`: **74/74** endpoints respondiendo.
+- `npm run test:api`: ejecutado; los errores observados corresponden principalmente a JWT ausente, IDs ficticios o límites de rate limit del smoke.
+- Suites bloqueadas por configuración ausente: `e2e-authenticated.mjs`, `e2e-customer-community-hosting.mjs` y `e2e-residential-dating.mjs`.
+
 | Área | Evidencia concreta | Resultado |
 |---|---|---|
 | Validación local | `npm run validate` ejecutado el 23-10 | TypeScript correcto; Vitest **39/39** |
@@ -222,6 +232,13 @@ La evidencia de build y mapping queda en `dist/` local; el APK/AAB están ignora
 - **Push externo:** no probado; faltan proyecto EAS, FCM, APNs, worker y tokens reales.
 
 ## Próxima secuencia de trabajo recomendada
+
+### Login ABAI
+
+- Mobile ya incluye el modo `Cliente ABAI` por teléfono + código OTP y usa rutas configurables.
+- Backend debe publicar y probar `/auth/abai/request-code` y `/auth/abai/verify-code`, o informar las rutas definitivas mediante `.env`.
+- Pendiente validar con ABAI/CRM el proveedor de envío (WhatsApp/SMS), formato del teléfono, consentimiento, expiración, límite de intentos, bloqueo antifraude y mapeo de cliente ABAI a `customer` NOD.
+- Pendiente ejecutar E2E con un teléfono ABAI real y verificar que la sesión permite entrar a Mascotas y Hogar sin selector adicional.
 
 1. Rotar/configurar secretos productivos.
 2. Configurar las cuentas/IDs E2E faltantes y repetir las tres suites bloqueadas.

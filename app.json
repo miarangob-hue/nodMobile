@@ -2,7 +2,7 @@
   "expo": {
     "name": "NOD",
     "slug": "nod-mobile",
-    "version": "1.0.32",
+    "version": "1.0.34",
     "orientation": "portrait",
     "scheme": "nod",
     "platforms": [
@@ -17,7 +17,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.nod.mobile",
-      "buildNumber": "1",
+      "buildNumber": "2",
       "infoPlist": {
         "NSCameraUsageDescription": "NOD usa la cámara para tomar fotos de documentos, lugares desbloqueados y evidencia de servicios.",
         "NSLocationWhenInUseUsageDescription": "NOD usa tu ubicación para registrar inicios de paseo, rutas y spots desbloqueados."
@@ -25,7 +25,7 @@
     },
     "android": {
       "package": "com.nod.mobile",
-      "versionCode": 32,
+      "versionCode": 34,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-foreground.png",
         "backgroundColor": "#FCFAF7"

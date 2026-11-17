@@ -63,6 +63,21 @@ Validación de esta integración: TypeScript correcto, **39/39 pruebas**, bundle
 
 E2E NOD Home ejecutado el **8 de noviembre de 2026** con `npm run test:e2e:home`: **13/13 checks aprobados**. La prueba creó una cuenta Customer desechable, inició sesión, cargó el catálogo real de 15 servicios, respondió una pregunta dinámica, creó una solicitud, repitió la mutación con la misma `Idempotency-Key`, verificó listado y detalle, y canceló la solicitud. También confirmó que el endpoint Provider Home rechaza correctamente una llamada sin JWT (`401`).
 
+### E2E integral — 9 de noviembre de 2026
+
+La batería E2E repetida con red autorizada quedó así:
+
+| Suite | Resultado |
+|---|---:|
+| `npm run validate` | **39/39** |
+| `e2e-provider-registration.mjs` | **10/10** |
+| `e2e-two-customers.mjs` | **38/38** — mascotas, perfiles sociales, Discovery, match/chat, comunidad, alojamiento/chat y reserva normal/chat |
+| `npm run test:e2e:home` | **13/13** — catálogo real de 15 servicios, solicitud, idempotencia, detalle y cancelación |
+| `audit-backend-contracts.mjs` | **74/74** endpoints respondiendo |
+| `npm run test:api` | Smoke ejecutado; respuestas `401/403/404` corresponden a recursos protegidos o IDs ficticios |
+
+Las suites `e2e-authenticated.mjs`, `e2e-customer-community-hosting.mjs` y `e2e-residential-dating.mjs` no arrancaron porque faltan sus variables/IDs E2E específicos en `.env`. La primera ejecución paralela también encontró DNS/rate limit; Home y dos clientes fueron repetidos de forma aislada y aprobaron completamente.
+
 Smoke visual Android capturado en `NOD_Pixel`:
 
 ![NOD onboarding Android](docs/screenshots/android-onboarding.png)
@@ -279,6 +294,17 @@ npm run build:ios
 ```
 
 Antes de generar el IPA distribuible se deben configurar el Apple Team, certificado de distribución, provisioning profile, APNs, `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID` y el proyecto EAS definitivo. Aún no se ha certificado un build iOS en dispositivo físico ni se ha generado un IPA de producción.
+
+## Login de clientes ABAI
+
+La app incluye el acceso `Cliente ABAI` con el flujo OTP definido para la propuesta: el cliente ingresa el teléfono registrado, backend solicita el código por WhatsApp/SMS y la app valida el código para devolver una sesión NOD de cliente. No se guardan credenciales de ABAI en el dispositivo.
+
+Rutas configurables en `.env`:
+
+- `POST EXPO_PUBLIC_NOD_ABAI_AUTH_REQUEST_PATH` (por defecto `/auth/abai/request-code`): `{ phone, channel }` → `{ challenge_id, masked_destination, expires_in }`.
+- `POST EXPO_PUBLIC_NOD_ABAI_AUTH_VERIFY_PATH` (por defecto `/auth/abai/verify-code`): `{ phone, code, challenge_id }` → `LoginResponse` estándar de NOD.
+
+Backend debe validar que el teléfono pertenece a un cliente ABAI, aplicar expiración, límite de intentos, antifraude y devolver `access_token`, `refresh_token`, `user`, `roles`, `customer` y `provider: null` con el mismo contrato de login existente.
 
 ## Estructura
 

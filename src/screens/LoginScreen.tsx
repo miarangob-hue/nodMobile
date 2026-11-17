@@ -16,7 +16,7 @@ import { Feather } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { BrandLogo } from "../components/BrandLogo";
 import { AuthDivider, GoogleAuthButton } from "../components/GoogleAuthButton";
-import { loginWithPassword } from "../api/auth";
+import { loginWithPassword, requestAbaiLoginCode, verifyAbaiLoginCode } from "../api/auth";
 import { assertRuntimeConfig } from "../config/env";
 import { loadLoginMode, saveLoginMode, saveSession, type Session } from "../storage/session";
 import { getFriendlyError } from "../utils/errors";
@@ -28,7 +28,7 @@ type Props = {
   onRegister: () => void;
 };
 
-type LoginMode = "customer" | "provider";
+type LoginMode = "customer" | "provider" | "abai";
 
 export function LoginScreen({ onLogin, onRegister, onRegisterCustomer }: Props) {
   const [mode, setMode] = useState<LoginMode>("customer");
@@ -38,6 +38,9 @@ export function LoginScreen({ onLogin, onRegister, onRegisterCustomer }: Props) 
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [abaiCode, setAbaiCode] = useState("");
+  const [abaiChallengeId, setAbaiChallengeId] = useState<string | undefined>();
+  const [abaiCodeRequested, setAbaiCodeRequested] = useState(false);
 
   useEffect(() => {
     void loadLoginMode().then((savedMode) => savedMode && setMode(savedMode));
@@ -47,6 +50,9 @@ export function LoginScreen({ onLogin, onRegister, onRegisterCustomer }: Props) 
     setMode(nextMode);
     setError(null);
     void saveLoginMode(nextMode);
+    setAbaiCodeRequested(false);
+    setAbaiCode("");
+    setAbaiChallengeId(undefined);
   }
 
   async function handleLogin() {
@@ -55,11 +61,31 @@ export function LoginScreen({ onLogin, onRegister, onRegisterCustomer }: Props) 
 
     try {
       assertRuntimeConfig(mode);
-      const session = await loginWithPassword(email.trim(), password, mode);
+      const session = mode === "abai"
+        ? await verifyAbaiLoginCode(email.trim(), abaiCode.trim(), abaiChallengeId)
+        : await loginWithPassword(email.trim(), password, mode);
       await saveSession(session);
       onLogin(session);
     } catch (currentError) {
       setError(getFriendlyError(currentError, "No se pudo iniciar sesión."));
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  async function handleAbaiCodeRequest() {
+    setError(null);
+    setIsLoading(true);
+    try {
+      assertRuntimeConfig("abai");
+      const response = await requestAbaiLoginCode(email.trim());
+      setAbaiChallengeId(response.challenge_id);
+      setAbaiCodeRequested(true);
+      Alert.alert("Código enviado", response.masked_destination
+        ? `Enviamos un código a ${response.masked_destination}.`
+        : "Enviamos un código al número registrado en ABAI.");
+    } catch (currentError) {
+      setError(getFriendlyError(currentError, "No pudimos validar tu teléfono como cliente ABAI."));
     } finally {
       setIsLoading(false);
     }
@@ -71,7 +97,7 @@ export function LoginScreen({ onLogin, onRegister, onRegisterCustomer }: Props) 
 
     try {
       assertRuntimeConfig(mode);
-      const session = await authenticateWithGoogle(mode);
+      const session = await authenticateWithGoogle(mode === "provider" ? "provider" : "customer");
       if (!session) return;
       await saveSession(session);
       onLogin(session);
@@ -93,7 +119,7 @@ export function LoginScreen({ onLogin, onRegister, onRegisterCustomer }: Props) 
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       <View style={styles.header}>
         <BrandLogo size="large" />
-        <Text style={styles.title}>Acceso {mode === "customer" ? "cliente" : "proveedor"}</Text>
+        <Text style={styles.title}>{mode === "abai" ? "Cliente ABAI" : `Acceso ${mode === "customer" ? "cliente" : "proveedor"}`}</Text>
       </View>
 
       <View style={styles.form}>
@@ -110,21 +136,24 @@ export function LoginScreen({ onLogin, onRegister, onRegisterCustomer }: Props) 
           >
             <Text style={[styles.segmentText, mode === "provider" && styles.segmentTextSelected]}>Proveedor</Text>
           </Pressable>
+          <Pressable onPress={() => changeMode("abai")} style={[styles.segment, mode === "abai" && styles.segmentSelected]}>
+            <Text style={[styles.segmentText, mode === "abai" && styles.segmentTextSelected]}>ABAI</Text>
+          </Pressable>
         </View>
 
         <TextInput
           autoCapitalize="none"
-          autoComplete="email"
+          autoComplete={mode === "abai" ? "tel" : "email"}
           autoCorrect={false}
-          keyboardType={Platform.OS === "android" ? "visible-password" : "email-address"}
+          keyboardType={mode === "abai" ? "phone-pad" : Platform.OS === "android" ? "visible-password" : "email-address"}
           onChangeText={setEmail}
-          placeholder="Email"
+          placeholder={mode === "abai" ? "+56 9 1234 5678" : "Email"}
           returnKeyType="next"
           showSoftInputOnFocus
           style={styles.input}
           value={email}
         />
-        <View style={styles.passwordField}>
+        {mode !== "abai" ? <View style={styles.passwordField}>
           <TextInput
             autoCapitalize="none"
             keyboardType="default"
@@ -138,37 +167,42 @@ export function LoginScreen({ onLogin, onRegister, onRegisterCustomer }: Props) 
           <Pressable accessibilityLabel={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"} onPress={() => setShowPassword((current) => !current)} style={styles.eyeButton}>
             <Feather color="#626D84" name={showPassword ? "eye-off" : "eye"} size={20} />
           </Pressable>
-        </View>
+        </View> : null}
 
-        <Pressable onPress={() => Alert.alert("Recuperar contraseña", "Te enviaremos instrucciones cuando la recuperación esté habilitada en el servidor.")} style={styles.forgotButton}>
+        {mode === "abai" ? <>
+          <Text style={styles.abaiHint}>Ingresa el teléfono registrado en ABAI para recibir un código de acceso.</Text>
+          {abaiCodeRequested ? <TextInput keyboardType="number-pad" onChangeText={setAbaiCode} placeholder="Código de 6 dígitos" style={styles.input} value={abaiCode} /> : null}
+        </> : null}
+
+        {mode !== "abai" ? <Pressable onPress={() => Alert.alert("Recuperar contraseña", "Te enviaremos instrucciones cuando la recuperación esté habilitada en el servidor.")} style={styles.forgotButton}>
           <Text style={styles.forgotText}>Olvidé mi contraseña</Text>
-        </Pressable>
+        </Pressable> : null}
 
         {error ? <View style={styles.errorBox}><Text style={styles.error}>{error}</Text><Pressable disabled={isLoading} onPress={() => void handleLogin()}><Text style={styles.retryText}>Reintentar</Text></Pressable></View> : null}
 
         <Pressable
-          disabled={isLoading || !email || !password}
-          onPress={handleLogin}
+          disabled={isLoading || !email || (mode === "abai" ? !abaiCodeRequested || !abaiCode : !password)}
+          onPress={mode === "abai" && !abaiCodeRequested ? () => void handleAbaiCodeRequest() : () => void handleLogin()}
           style={({ pressed }) => [
             styles.primaryButton,
             (pressed || isLoading) && styles.buttonPressed,
-            (!email || !password) && styles.buttonDisabled
+            (!email || (mode === "abai" ? !abaiCodeRequested || !abaiCode : !password)) && styles.buttonDisabled
           ]}
         >
           {isLoading ? <ActivityIndicator color="#ffffff" /> : (
-            <Text style={[styles.primaryText, (!email || !password) && styles.primaryTextDisabled]}>
-              Entrar como {mode === "customer" ? "cliente" : "proveedor"}
+            <Text style={[styles.primaryText, (!email || (mode === "abai" ? !abaiCodeRequested || !abaiCode : !password)) && styles.primaryTextDisabled]}>
+              {mode === "abai" ? (abaiCodeRequested ? "Validar código ABAI" : "Enviar código ABAI") : `Entrar como ${mode === "customer" ? "cliente" : "proveedor"}`}
             </Text>
           )}
         </Pressable>
 
-        <AuthDivider />
+        {mode !== "abai" ? <><AuthDivider />
         <GoogleAuthButton
           disabled={isLoading}
           label={`Continuar con Google como ${mode === "customer" ? "cliente" : "proveedor"}`}
           loading={isGoogleLoading}
           onPress={() => void handleGoogleLogin()}
-        />
+        /></> : null}
 
         {mode === "provider" ? <Pressable onPress={onRegister} style={styles.secondaryButton}>
           <Text style={styles.secondaryText}>Crear cuenta de proveedor</Text>
@@ -249,6 +283,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     minHeight: 52,
     paddingHorizontal: 14
+  },
+  abaiHint: {
+    color: "#626D84",
+    fontSize: 14,
+    lineHeight: 20
   },
   passwordField: {
     alignItems: "center",

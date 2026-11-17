@@ -19,7 +19,7 @@ export async function clearSession() {
   await SecureStore.deleteItemAsync(sessionKey);
 }
 
-export type SavedLoginMode = "customer" | "provider";
+export type SavedLoginMode = "customer" | "provider" | "abai";
 
 export async function saveLoginMode(mode: SavedLoginMode) {
   await SecureStore.setItemAsync(loginModeKey, mode);
@@ -27,5 +27,5 @@ export async function saveLoginMode(mode: SavedLoginMode) {
 
 export async function loadLoginMode(): Promise<SavedLoginMode | null> {
   const mode = await SecureStore.getItemAsync(loginModeKey);
-  return mode === "customer" || mode === "provider" ? mode : null;
+  return mode === "customer" || mode === "provider" || mode === "abai" ? mode : null;
 }

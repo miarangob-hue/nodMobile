@@ -18,6 +18,8 @@ yarn-error.log*
 *.keystore
 *.apk
 *.aab
+!dist/NOD-1.0.34-android-v34.apk
+!dist/NOD-1.0.34-android-v34.aab
 google-services.json
 GoogleService-Info.plist
 secrets/
